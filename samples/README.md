@@ -54,3 +54,15 @@ Fall times are a visual estimate from 2–4 fps frame mosaics, not a ground-trut
 Both clips are under the [Pexels License](https://www.pexels.com/license/): free to use and modify, attribution not
 required (given above as a courtesy). The license does not allow selling unaltered copies or implying endorsement by
 the people shown.
+
+## UniData "Fall Detection" samples (CC BY-NC-ND 4.0)
+
+| File | Source | License | Content (visual check) |
+|---|---|---|---|
+| `unidata-sample_1.mp4` | [ud-smart-city/fall-detection](https://huggingface.co/datasets/ud-smart-city/fall-detection), `sample_1.mp4` | [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) | Portrait 1080x1920, 13.3 s. A man walks across a snowy parking lot, slips, lies on the snow and gets up. |
+| `unidata-sample_2.mp4` | [ud-smart-city/fall-detection](https://huggingface.co/datasets/ud-smart-city/fall-detection), `sample_2.mp4` | [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) | 1920x1080, 13.8 s. A person walks along an icy sidewalk next to a fence, slips, falls and gets up. |
+
+**These two files are redistributed unmodified under their own license (CC BY-NC-ND 4.0, © UniData),
+not under the repository's AGPL-3.0, for non-commercial study only.** Because the license does not allow
+derivatives, no annotated video, crop or GIF of them is included in this repository; only the measured alert
+times are reported in the README.

@@ -24,3 +24,6 @@ runs/
 .ipynb_checkpoints/
 
 # Note: weights/*.pt are intentionally NOT ignored (weights/yolo11n-pose.pt is shipped).
+
+# local-only experiments (third-party / no-derivatives material)
+local_test/

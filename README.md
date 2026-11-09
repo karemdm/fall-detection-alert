@@ -67,14 +67,19 @@ H.264 720p, no audio):
 | [`results/gmdcsa24-s1-fall-11_alert.mp4`](results/gmdcsa24-s1-fall-11_alert.mp4) | Standing facing the camera, then a backward fall ending on the side. |
 | [`results/snow-pexels-20595440_alert.mp4`](results/snow-pexels-20595440_alert.mp4) | Outdoor: man kicks a tree, falls backward and lies in deep snow (clip ends ~1 s later). |
 
-Measured with the default thresholds (own measurement on 3 clips, not a validation; snow fall times are a visual
-estimate, GMDCSA24 times are dataset labels):
+Measured with the default thresholds (own measurement on 5 clips, not a validation; snow and UniData fall times are
+a visual estimate, GMDCSA24 times are dataset labels). The UniData clips are CC BY-NC-ND, so only their numbers
+are reported (no annotated video):
 
 | Clip | Fall | `FALLING` | `ALERT` | Upright before? |
 |---|---|---|---|---|
 | fall-05 | 1.8–5.0 s (label) | 2.27 s | 3.31 s | yes (0–2.24 s) |
 | fall-11 | 1.0–6.0 s (label) | 2.03 s | 3.15 s | yes (0–2.00 s) |
 | snow-20595440 | ~2.9–3.6 s, ends lying | 3.35 s | none (`FALLEN` at 3.45 s, clip ends 4.55 s) | yes (0–3.30 s) |
+| unidata-sample_1 (slip on snow) | ~3.4 s, lies then gets up | 3.47 s | 4.54 s, ends `recovered` at 10.28 s | yes (0–3.4 s) |
+| unidata-sample_2 (slip on icy sidewalk, small person) | ~5.5 s, gets up | 5.54 s | 6.66 s with `--imgsz 1280`, ends `recovered` at 12.40 s; **none at the default 640** (person lost by the tracker) | yes |
+
+For small or distant people, run with `--imgsz 1280`.
 
 No false alerts on any clip. The snow misses are explained by the rules: a fall that ends **sitting** never meets
 the lying rule, and the second clip ends before the 1.0 s `fallen_seconds` confirmation (an ID switch at 4.1 s also
