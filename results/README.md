@@ -1,8 +1,11 @@
 # Results
 
-Annotated videos produced by this project with the default settings
-(`weights/yolo11n-pose.pt`, `conf=0.35`, `imgsz=640`, ByteTrack, default `FallConfig`), re-encoded to
-H.264 720p without audio.
+Annotated videos produced by this project, re-encoded to H.264 720p without audio.
+
+- **Fall mix** (`fall_mix_alert.mp4`): current defaults (`weights/yolo11n-pose.pt`, `--conf 0.30`, `--imgsz 1280`,
+  ByteTrack, default `FallConfig`; upright tracks with an `n/a` torso angle are not drawn).
+- **Single clips** (below): produced with the previous default `--conf 0.35`, `imgsz=640`, before the `n/a` boxes
+  were hidden; re-running them with the current defaults can give slightly different times.
 
 - `gmdcsa24-s1-fall-05_alert.mp4` + `gmdcsa24-s1-fall-05_events.json`: walking, then a forward fall to hands and
   knees and lying on the floor.

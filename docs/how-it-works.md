@@ -28,6 +28,12 @@ flowchart TD
 `model.track(frame, persist=True, classes=[0], conf=0.30, imgsz=640, tracker="bytetrack.yaml")`
 returns, for each person with a confirmed track id, a box `(x1, y1, x2, y2)` and
 17 COCO keypoints `(x, y, confidence)`. Detections without a track id are ignored.
+For small or distant people use `--imgsz 1280` (the published fall mix was run this way).
+
+**Rendering.** Boxes are colored by state: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`.
+Upright tracks whose torso angle is `n/a` (shoulder/hip keypoints below `min_kp_conf`) are not drawn,
+because they are mostly false person detections; falling, fallen and alert tracks are always drawn.
+The pose skeleton is drawn only with `--draw-skeleton`.
 
 ## 2. Features (`features.py`, standard library only)
 
