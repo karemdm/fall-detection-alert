@@ -66,15 +66,16 @@ For a GPU, install the PyTorch build matching your CUDA version from [pytorch.or
 [`results/fall_mix_alert.mp4`](results/fall_mix_alert.mp4) (55.2 s, H.264 720p, no audio) is the annotated output on
 [`samples/fall_mix_input.mp4`](samples/README.md#fall-mix-fall_mix_inputmp4): eight GMDCSA24 falls of three subjects
 (day and night, side, forward and backward falls) followed by the Pexels snow fall, cut to ~2 s before each
-labelled fall and joined without transitions. Default thresholds; run at `--imgsz 1280` (published) and at the
-default 640. Hit = `ALERT` starts within the labelled fall window + 2 s.
+labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s.
 
-| `--imgsz` | Hits | Misses | False alerts | Alert delay after labelled fall start (hits) |
+| Run | Hits | Misses | False alerts | Alert delay after labelled fall start |
 |---|---|---|---|---|
-| 1280 (published video) | 8 / 9 | 1 (S3 04, person lying on the floor barely detected) | 0 | 1.5–2.6 s, one marginal hit at +4.2 s |
-| 640 | 6 / 9 | 3 (S2 02, S3 04, S3 16) | 0 | 1.5–2.4 s |
+| `--imgsz 1280`, `--conf 0.30` (current defaults; published video) | **9 / 9** | 0 | 0 | 1.5–2.6 s; two late hits at +4.0 s (S2 02, S3 04) |
+| `--imgsz 1280`, `--conf 0.35` (previous run) | 8 / 9 | 1 (S3 04) | 0 | 1.5–2.6 s, one marginal hit at +4.2 s |
+| `--imgsz 640`, `--conf 0.35` (previous run) | 6 / 9 | 3 (S2 02, S3 04, S3 16) | 0 | 1.5–2.4 s |
 
-Own measurement on one compilation, not a validation. The misses come from the pose model losing the person lying
+Own measurement on one compilation, not a validation. Lowering `--conf` to 0.30 kept the person lying on the
+patterned floor detected long enough to confirm the two hard segments. In the previous runs the misses came from the pose model losing the person lying
 on the floor (each re-detection starts a new track and restarts the 1.0 s confirmation), not from the rules.
 Per-segment table, events and observations: [results/README.md](results/README.md#fall-mix).
 
@@ -126,6 +127,18 @@ PYTHONPATH=src python -m fall_alert --help
 ```
 
 Press `Q` in the preview window to stop early.
+
+### Testing on your own footage
+
+Any local video can be analysed without adding it to the repository: put it in `local_test/` (ignored by git) and run
+
+```bash
+fall-alert -i local_test/my_video.mp4 -o local_test/my_video_alert.mp4 --events-json local_test/events.json --imgsz 1280
+```
+
+Only publish inputs and outputs you have the right to share (your own recordings with consent, or footage under a
+license that allows redistribution). Third-party videos, e.g. YouTube compilations under the standard license, are
+fine for private testing but should not be committed.
 
 ## Parameters
 

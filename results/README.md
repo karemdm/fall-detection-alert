@@ -34,11 +34,13 @@ Rule used: **hit** if an `ALERT` starts inside `[labelled fall start, labelled f
 (clipped to the segment end), **miss** otherwise; a **false alert** is an `ALERT` starting outside every such
 window.
 
+Columns "(1280)" are the current defaults (`--conf 0.30`, published video); "(640)" is the earlier run at `--conf 0.35`.
+
 | # | Segment | Labelled fall (mix s) | `FALLING` (1280) | `ALERT` (1280) | Result 1280 | `ALERT` (640) | Result 640 |
 |---|---|---|---|---|---|---|---|
 | 1 | S1 05, walking, right side fall | 1.80–5.00 | 2.20 | 3.27 (+1.47 s) | hit | 3.30 | hit |
-| 2 | S2 02, walking, right side fall | 7.87–13.17 | 8.33 | 12.10 (+4.23 s), one frame | hit (marginal) | none | miss |
-| 3 | S3 04, walking, backward fall | 14.80–18.60 | 15.07 | none | **miss** | none | miss |
+| 2 | S2 02, walking, right side fall | 7.87–13.17 | 8.33 | 11.87 (+4.00 s) | hit (late) | none | miss |
+| 3 | S3 04, walking, backward fall | 14.80–18.60 | 15.07 | 18.83 (+4.03 s) | hit (late) | none | miss |
 | 4 | S2 17, walking, forward fall | 21.07–24.57 | 21.70 | 22.73 (+1.66 s) | hit | 22.77 | hit |
 | 5 | S1 11, standing, backward fall | 26.07–31.07 | 27.13 (`FALLEN`) | 28.13 (+2.06 s) | hit | 28.23 | hit |
 | 6 | S2 13, night, backward fall (side view) | 33.17–38.67 | 34.37 | 35.67 (+2.50 s) | hit | 35.57 | hit |
