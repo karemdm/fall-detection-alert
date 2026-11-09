@@ -8,12 +8,15 @@ H.264 720p without audio.
   knees and lying on the floor.
 - `gmdcsa24-s1-fall-11_alert.mp4` + `gmdcsa24-s1-fall-11_events.json`: standing facing the camera, then a backward
   fall ending on the side.
+- `snow-pexels-20595440_alert.mp4` + `snow-pexels-20595440_events.json`: outdoor, man kicks a tree, falls backward
+  and lies in deep snow; the clip ends ~1 s after he lands (**no alert**, see below).
 
 Reproduce (from the repo root):
 
 ```bash
 fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --no-display
 fall-alert -i samples/gmdcsa24-s1-fall-11.mp4 -o outputs/fall-11.mp4 --events-json results/gmdcsa24-s1-fall-11_events.json --no-display
+fall-alert -i samples/snow-pexels-20595440.mp4 -o outputs/snow-20595440.mp4 --events-json results/snow-pexels-20595440_events.json --no-display
 ```
 
 ## What was measured
@@ -45,8 +48,33 @@ Observations (from the `--trace-csv` output and frames of the annotated videos):
 The demo GIF (`docs/assets/demo.gif`) is the output on a 12 s concatenation of the same two clips; the cut between
 them produced a new track id (#3) and a second alert (9.00 s, i.e. 3.13 s into the second clip).
 
+## Snow clips (outdoor, Pexels)
+
+Same default settings, no threshold changed. Fall times are a visual estimate from frame mosaics (no dataset
+label); state times come from `--trace-csv`.
+
+| Clip | Fall (visual estimate) | `FALLING` | `FALLEN` | `ALERT` | Upright before? |
+|---|---|---|---|---|---|
+| snow-pexels-20595440 | upright until ~2.9 s, lying on the snow ~3.5–3.6 s | 3.35 s | 3.45 s | none (clip ends at 4.55 s) | yes (0–3.30 s) |
+
+Observations (from the trace and frames of the annotated videos):
+
+- **No false alerts** on the snow clip: the person was `UPRIGHT` before the fall, including the kicking motion (torso angle up to ~40° before the fall,
+  below the 45° `falling_angle`).
+- **20595440 — detected but not confirmed before the clip ends.** The torso angle crossed 45° at 3.35 s
+  (`FALLING`) and 60° at 3.45 s (`FALLEN`), about when the person reaches the snow. The 1.0 s `fallen_seconds`
+  confirmation would end at ~4.45 s, but track #1 was last seen at 4.08 s (body partly hidden in deep snow, likely cause) and a new track #2
+  appeared in `FALLEN` at 4.12 s, restarting the timer; the clip ends at 4.55 s. In a single exploratory run with
+  `--fallen-seconds 0.5` (not kept, not a default change) track #1 alerted at 3.92 s.
+- Possible changes, **not applied**: a shorter `fallen_seconds` for short clips (more alerts on brief lying
+  postures), or carrying the `FALLEN` timer over when a new track appears at the same place. Neither was tested on
+  more data.
+
 ## Source footage
 
 GMDCSA24 dataset (Ekram Alam et al.), MIT License — see [../samples/README.md](../samples/README.md) for links,
 license notice and citation. The subject is an adult who, according to the dataset authors, consented to the
 recording. The outputs are shown only to illustrate the method.
+
+Snow clips: Pexels (Gustavo Fring; Ovais Ibn farooq), [Pexels License](https://www.pexels.com/license/) — see
+[../samples/README.md](../samples/README.md#snow-clips-pexels) for links.

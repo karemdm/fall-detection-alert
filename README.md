@@ -58,19 +58,27 @@ For a GPU, install the PyTorch build matching your CUDA version from [pytorch.or
 
 ## Results
 
-Outputs produced by this project on two GMDCSA24 clips (re-encoded to H.264 720p, no audio):
+Outputs produced by this project on two indoor GMDCSA24 clips and one outdoor Pexels snow clip (re-encoded to
+H.264 720p, no audio):
 
 | File | Content |
 |---|---|
 | [`results/gmdcsa24-s1-fall-05_alert.mp4`](results/gmdcsa24-s1-fall-05_alert.mp4) | Walking, then a forward fall to hands and knees and lying on the floor. |
 | [`results/gmdcsa24-s1-fall-11_alert.mp4`](results/gmdcsa24-s1-fall-11_alert.mp4) | Standing facing the camera, then a backward fall ending on the side. |
+| [`results/snow-pexels-20595440_alert.mp4`](results/snow-pexels-20595440_alert.mp4) | Outdoor: man kicks a tree, falls backward and lies in deep snow (clip ends ~1 s later). |
 
-Measured with the default thresholds (own measurement on 2 clips, not a validation):
+Measured with the default thresholds (own measurement on 3 clips, not a validation; snow fall times are a visual
+estimate, GMDCSA24 times are dataset labels):
 
-| Clip | Labelled fall | `FALLING` | `ALERT` | Upright before? |
+| Clip | Fall | `FALLING` | `ALERT` | Upright before? |
 |---|---|---|---|---|
-| fall-05 | 1.8–5.0 s | 2.27 s | 3.31 s | yes (0–2.24 s) |
-| fall-11 | 1.0–6.0 s | 2.03 s | 3.15 s | yes (0–2.00 s) |
+| fall-05 | 1.8–5.0 s (label) | 2.27 s | 3.31 s | yes (0–2.24 s) |
+| fall-11 | 1.0–6.0 s (label) | 2.03 s | 3.15 s | yes (0–2.00 s) |
+| snow-20595440 | ~2.9–3.6 s, ends lying | 3.35 s | none (`FALLEN` at 3.45 s, clip ends 4.55 s) | yes (0–3.30 s) |
+
+No false alerts on any clip. The snow misses are explained by the rules: a fall that ends **sitting** never meets
+the lying rule, and the second clip ends before the 1.0 s `fallen_seconds` confirmation (an ID switch at 4.1 s also
+restarted the timer). Details in [results/README.md](results/README.md#snow-clips-outdoor-pexels).
 
 Event files, observations and attribution: [results/README.md](results/README.md).
 
@@ -153,7 +161,7 @@ fall-detection-alert/
 │   ├── how-it-works.md
 │   └── assets/demo.gif
 ├── results/            # annotated example outputs + event JSON
-├── samples/            # two GMDCSA24 test clips (MIT)
+├── samples/            # two GMDCSA24 test clips (MIT) + two Pexels snow clips
 ├── weights/
 │   ├── README.md
 │   └── yolo11n-pose.pt
@@ -183,16 +191,19 @@ python -c "import sys; sys.path[:0]=['src','tests']; import test_state_machine a
 
 - **Research prototype, not a medical or certified safety device.** Do not rely on it to protect people; an alert
   (or its absence) must be checked by a person.
-- **Tested on two clips only**, of one subject in one room with a fixed camera. No recall, false-alarm rate or
-  latency statistics are claimed. Thresholds are generic starting values, not tuned on a dataset.
+- **Tested on four clips only** (two indoor clips of one subject, two outdoor snow clips). No recall, false-alarm
+  rate or latency statistics are claimed. Thresholds are generic starting values, not tuned on a dataset.
+- **Falls that end sitting are not detected** (torso stays upright, box not wide enough), and very short clips can end
+  before the `fallen_seconds` confirmation (the latter happened on the snow clip).
 - **Lying on purpose looks like a fall** (bed, sofa, floor exercise) once the posture is held; slow falls and
   sitting down quickly are not distinguished from falls by these rules.
 - **View dependence.** A person lying along the camera's line of sight can keep a narrow box and a foreshortened
   torso and may never count as lying. Partial occlusion (furniture) removes keypoints and changes the box.
 - **Tracking drives the result.** An ID switch during the fall starts a new track in `UPRIGHT`, which can delay or
   miss the alert. On the 12 s concatenated test video the cut between clips created a new track as expected.
-- The velocity cue did not cross its 0.8 H/s default on the sample clips (peaks 0.70 and 0.60 H/s); `FALLING` was
-  started by the torso angle. See [docs/how-it-works.md](docs/how-it-works.md#5-parameter-guide-and-tuning-tips).
+- The velocity cue never started `FALLING` on the sample clips: peaks 0.70 and 0.60 H/s (GMDCSA24); on the
+  snow kick clip it exceeded 0.8 H/s only after `FALLING` had started. `FALLING` was started by the
+  torso angle. See [docs/how-it-works.md](docs/how-it-works.md#5-parameter-guide-and-tuning-tips).
 - Timestamps come from the container (`CAP_PROP_POS_MSEC`); the output video is written at a constant FPS, so
   variable-frame-rate inputs can show small timing differences between the banner and the player clock.
 
@@ -203,10 +214,12 @@ python -c "import sys; sys.path[:0]=['src','tests']; import test_state_machine a
 - [OpenCV](https://opencv.org) — Apache-2.0.
 - Sample clips from [GMDCSA24](https://github.com/ekramalam/GMDCSA24-A-Dataset-for-Human-Fall-Detection-in-Videos)
   (Ekram Alam et al.) — MIT; see [samples/README.md](samples/README.md) for the citation.
+- Snow clips from [Pexels](https://www.pexels.com) (Gustavo Fring; Ovais Ibn farooq) — [Pexels License](https://www.pexels.com/license/);
+  see [samples/README.md](samples/README.md#snow-clips-pexels).
 
 See [weights/README.md](weights/README.md) for model files and sizes.
 
 ## License
 
 AGPL-3.0, because the project depends on Ultralytics YOLO (AGPL-3.0). See the `LICENSE` file.
-The sample clips keep their own MIT license (see [samples/README.md](samples/README.md)).
+The sample clips keep their own licenses (GMDCSA24: MIT; snow clips: Pexels License; see [samples/README.md](samples/README.md)).
