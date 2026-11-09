@@ -1,0 +1,12 @@
+{
+  "input": "gmdcsa24-s1-fall-11.mp4",
+  "events": [
+    {
+      "track_id": 1,
+      "fall_start": 2.032,
+      "start": 3.152,
+      "end": 6.064,
+      "end_reason": "end_of_video"
+    }
+  ]
+}

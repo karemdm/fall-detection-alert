@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fall-detection-alert"
+version = "0.1.0"
+description = "Rule-based fall detection and alerting on Ultralytics YOLO pose keypoints with tracking."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "AGPL-3.0-only" }
+authors = [{ name = "Karem Daiane Marcomini" }]
+keywords = ["computer-vision", "yolo", "pose-estimation", "fall-detection", "tracking"]
+dependencies = [
+    "ultralytics>=8.4.0",
+    "torch>=2.0",
+    "opencv-python>=4.8",
+    "numpy>=1.24",
+    "lap>=0.5.12",
+]
+
+[project.scripts]
+fall-alert = "fall_alert.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
