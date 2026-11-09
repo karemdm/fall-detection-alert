@@ -49,6 +49,7 @@ def render(
     active: Sequence[AlertEvent],
     t: float,
     min_conf: float,
+    draw_keypoints: bool = False,
 ) -> None:
     """Annotates ``frame`` in place.
 
@@ -59,6 +60,7 @@ def render(
         active: Currently open alert events.
         t: Video time in seconds.
         min_conf: Keypoint confidence gate used for drawing.
+        draw_keypoints: Also draw the pose skeleton (off by default).
     """
     h, w = frame.shape[:2]
     unit = max(1, round(h / 720))
@@ -66,7 +68,8 @@ def render(
     for track_id, (box, keypoints) in persons.items():
         status = statuses[track_id]
         color = STATE_COLORS[status.state]
-        draw_skeleton(frame, keypoints, min_conf, 2 * unit)
+        if draw_keypoints:
+            draw_skeleton(frame, keypoints, min_conf, 2 * unit)
         x1, y1, x2, y2 = (int(v) for v in box)
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 3 * unit if status.state == ALERT else 2 * unit)
         angle = status.features.torso_angle

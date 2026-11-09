@@ -16,7 +16,7 @@ video and, optionally, a JSON list of alert events.
 - Keypoint-confidence gating; falls back to the box aspect ratio when shoulders/hips are not visible.
 - Explainable rules: torso angle, aspect ratio, hip velocity normalized by body height, time thresholds.
 - Per-track state machine with recovery (`ALERT` ends after the person is upright for a while).
-- Annotated MP4 at the input FPS: skeleton, box colored by state, `state | angle` label, alert banner with time.
+- Annotated MP4 at the input FPS: box colored by state, `state | angle` label, alert banner with time (pose skeleton optional with `--draw-skeleton`).
 - `--events-json` export (track id, fall start, alert start/end, end reason) and `--trace-csv` per-frame features.
 - All thresholds in one dataclass and on the CLI; pure logic is standard-library only and unit tested.
 
@@ -105,6 +105,7 @@ Press `Q` in the preview window to stop early.
 | `--events-json` | — | Write alert events to this JSON file. |
 | `--trace-csv` | — | Write per-frame, per-track features and states to this CSV file. |
 | `--no-display` | off | Do not open the preview window (implied on Linux without `DISPLAY`/`WAYLAND_DISPLAY`). |
+| `--draw-skeleton` | off | Also draw the pose keypoints and skeleton. |
 | `--min-kp-conf` | `0.5` | Minimum keypoint confidence for shoulders/hips. |
 | `--falling-angle` | `45` | Torso angle from vertical (deg) that starts `FALLING`. |
 | `--fall-velocity` | `0.8` | Downward hip velocity (body heights/s) that starts `FALLING`. |
@@ -124,7 +125,7 @@ Press `Q` in the preview window to stop early.
 ## Output
 
 - **Video** (same resolution and FPS as the input):
-  - COCO skeleton per person;
+  - COCO skeleton per person only with `--draw-skeleton` (off by default);
   - box colored by state: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT` (thicker for `ALERT`);
   - label `#<track id> <STATE> | <torso angle> deg` (`n/a` when the torso keypoints are gated out);
   - red banner `FALL ALERT #<ids> since <t> s` while an alert is open, and the video time in the bottom-right corner.
@@ -165,7 +166,7 @@ fall-detection-alert/
 │   ├── state_machine.py  # per-track UPRIGHT/FALLING/FALLEN/ALERT logic (stdlib)
 │   ├── monitor.py        # multi-track manager and alert events (stdlib)
 │   ├── pipeline.py       # video loop, tracking, export
-│   └── rendering.py      # skeleton, boxes, labels, banner
+│   └── rendering.py      # boxes, labels, banner (optional skeleton)
 └── tests/
     ├── test_features.py
     ├── test_monitor.py

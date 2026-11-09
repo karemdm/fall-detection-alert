@@ -53,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--events-json", help="Write alert events (track id, fall/alert start, end) to this JSON file.")
     p.add_argument("--trace-csv", help="Write per-frame, per-track features and states to this CSV file.")
     p.add_argument("--no-display", action="store_true", help="Do not open the preview window (implied without a display).")
+    p.add_argument("--draw-skeleton", action="store_true", help="Also draw the pose keypoints and skeleton (off by default).")
     p.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     g = p.add_argument_group("fall thresholds")
@@ -77,6 +78,7 @@ def config_from_args(args: argparse.Namespace) -> RunConfig:
         imgsz=args.imgsz,
         tracker=args.tracker,
         display=not args.no_display and display_available(),
+        draw_skeleton=args.draw_skeleton,
         events_json=args.events_json,
         trace_csv=args.trace_csv,
         fall=fall,

@@ -72,6 +72,7 @@ class RunConfig:
     imgsz: int = 640
     tracker: str = "bytetrack.yaml"
     display: bool = False
+    draw_skeleton: bool = False
     events_json: Optional[str] = None
     trace_csv: Optional[str] = None
     fall: FallConfig = field(default_factory=FallConfig)
