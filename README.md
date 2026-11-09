@@ -134,7 +134,7 @@ Press `Q` in the preview window to stop early.
 | `-i, --input` | — | Input video. |
 | `-o, --output` | — | Annotated output MP4 (written at the input FPS, `mp4v`). |
 | `--model` | `weights/yolo11n-pose.pt` | Pose weights path or official Ultralytics name (auto-downloaded). |
-| `--conf` | `0.35` | Detection confidence threshold. |
+| `--conf` | `0.30` | Detection confidence threshold. |
 | `--imgsz` | `640` | Inference image size. |
 | `--tracker` | `bytetrack.yaml` | Ultralytics tracker config (`bytetrack.yaml` or `botsort.yaml`). |
 | `--events-json` | — | Write alert events to this JSON file. |
@@ -163,6 +163,8 @@ Press `Q` in the preview window to stop early.
   - COCO skeleton per person only with `--draw-skeleton` (off by default);
   - box colored by state: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT` (thicker for `ALERT`);
   - label `#<track id> <STATE> | <torso angle> deg` (`n/a` when the torso keypoints are gated out);
+    `UPRIGHT` tracks with an `n/a` angle are not drawn, because they are mostly false person detections
+    (objects, coats, shadows); falling, fallen and alert tracks are always drawn;
   - red banner `FALL ALERT #<ids> since <t> s` while an alert is open, and the video time in the bottom-right corner.
 - **Events JSON** (`--events-json`):
 

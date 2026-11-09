@@ -68,7 +68,7 @@ class RunConfig:
     input_path: str
     output_path: str
     model: str = DEFAULT_MODEL
-    conf: float = 0.35
+    conf: float = 0.30
     imgsz: int = 640
     tracker: str = "bytetrack.yaml"
     display: bool = False

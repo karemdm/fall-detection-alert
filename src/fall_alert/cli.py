@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-i", "--input", required=True, help="Input video path.")
     p.add_argument("-o", "--output", required=True, help="Annotated output MP4 path.")
     p.add_argument("--model", default=DEFAULT_MODEL, help="Pose weights path or official name (default: %(default)s).")
-    p.add_argument("--conf", type=float, default=0.35, help="Detection confidence threshold (default: %(default)s).")
+    p.add_argument("--conf", type=float, default=0.30, help="Detection confidence threshold (default: %(default)s).")
     p.add_argument("--imgsz", type=int, default=640, help="Inference image size (default: %(default)s).")
     p.add_argument("--tracker", default="bytetrack.yaml", help="Ultralytics tracker config (default: %(default)s).")
     p.add_argument("--events-json", help="Write alert events (track id, fall/alert start, end) to this JSON file.")

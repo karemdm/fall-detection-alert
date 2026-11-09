@@ -61,12 +61,19 @@ def render(
         t: Video time in seconds.
         min_conf: Keypoint confidence gate used for drawing.
         draw_keypoints: Also draw the pose skeleton (off by default).
+
+    Upright tracks whose torso angle is unavailable (``n/a``: shoulder/hip
+    keypoints below ``min_conf``) are not drawn: in practice they are mostly
+    false person detections (objects, coats, shadows). Tracks that are
+    falling, fallen or in alert are always drawn.
     """
     h, w = frame.shape[:2]
     unit = max(1, round(h / 720))
     scale = 0.6 * unit
     for track_id, (box, keypoints) in persons.items():
         status = statuses[track_id]
+        if status.state == UPRIGHT and status.features.torso_angle is None:
+            continue
         color = STATE_COLORS[status.state]
         if draw_keypoints:
             draw_skeleton(frame, keypoints, min_conf, 2 * unit)

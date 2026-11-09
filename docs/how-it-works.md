@@ -25,7 +25,7 @@ flowchart TD
 
 ## 1. Detection, keypoints and tracking
 
-`model.track(frame, persist=True, classes=[0], conf=0.35, imgsz=640, tracker="bytetrack.yaml")`
+`model.track(frame, persist=True, classes=[0], conf=0.30, imgsz=640, tracker="bytetrack.yaml")`
 returns, for each person with a confirmed track id, a box `(x1, y1, x2, y2)` and
 17 COCO keypoints `(x, y, confidence)`. Detections without a track id are ignored.
 
