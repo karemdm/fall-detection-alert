@@ -1,0 +1,61 @@
+{
+  "input": "fall_mix_input.mp4",
+  "events": [
+    {
+      "track_id": 1,
+      "fall_start": 2.2,
+      "start": 3.267,
+      "end": 5.833,
+      "end_reason": "lost"
+    },
+    {
+      "track_id": 16,
+      "fall_start": 10.933,
+      "start": 12.1,
+      "end": 12.1,
+      "end_reason": "lost"
+    },
+    {
+      "track_id": 28,
+      "fall_start": 21.7,
+      "start": 22.733,
+      "end": 25.067,
+      "end_reason": "lost"
+    },
+    {
+      "track_id": 30,
+      "fall_start": 27.133,
+      "start": 28.133,
+      "end": 31.333,
+      "end_reason": "lost"
+    },
+    {
+      "track_id": 37,
+      "fall_start": 34.367,
+      "start": 35.667,
+      "end": 36.733,
+      "end_reason": "lost"
+    },
+    {
+      "track_id": 49,
+      "fall_start": 43.0,
+      "start": 44.0,
+      "end": 45.6,
+      "end_reason": "lost"
+    },
+    {
+      "track_id": 51,
+      "fall_start": 48.267,
+      "start": 49.6,
+      "end": 51.533,
+      "end_reason": "lost"
+    },
+    {
+      "track_id": 56,
+      "fall_start": 53.233,
+      "start": 55.133,
+      "end": 55.2,
+      "end_reason": "end_of_video"
+    }
+  ]
+}

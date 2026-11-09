@@ -1,7 +1,44 @@
 # Sample clips
 
 Two indoor test clips from the **GMDCSA24** human fall detection dataset (copied unmodified, original audio
-included) and two outdoor snow clips from **Pexels** (see [Snow clips (Pexels)](#snow-clips-pexels)).
+included), one outdoor snow clip from **Pexels** (see [Snow clips (Pexels)](#snow-clips-pexels)) and a
+**fall mix** compiled from GMDCSA24 and Pexels footage (see [Fall mix](#fall-mix-fall_mix_inputmp4)).
+
+## Fall mix (`fall_mix_input.mp4`)
+
+A 55.2 s compilation of nine falls: eight GMDCSA24 clips (three subjects, day and night recordings, side,
+forward and backward falls, different rooms and camera positions) followed by the Pexels snow fall. Built with
+ffmpeg:
+
+- each segment runs from ~2 s before the labelled fall start (or the clip start) to ~2.5 s after the labelled fall
+  end (or the clip end); in practice the labelled fall lasts until the end of almost every GMDCSA24 clip, so the
+  segments end at the clip end;
+- each segment is converted to 30 fps and fitted into 1280x720 with black padding (the 640x480 night clips get
+  black side bars, the portrait snow clip gets wide black side bars), audio removed;
+- the segments are concatenated without transitions and encoded with H.264 (`-crf 23`), 1657 frames.
+
+The six Subject 2 / Subject 3 clips were downloaded from the GMDCSA24 repository only to build this mix and are
+not stored separately in this repository. The UniData clips are **not** used in the mix.
+
+| # | Mix time (s) | Source file | Source in–out (s) | Label (`Subject N/Fall.csv`) | Labelled fall (source s) | Labelled fall (mix s) |
+|---|---|---|---|---|---|---|
+| 1 | 0.00–5.87 | GMDCSA24 `Subject 1/Fall/05.mp4` | 0.00–5.86 (whole clip) | Walking to falling, right side fall | 1.8–5.0 | 1.80–5.00 |
+| 2 | 5.87–13.60 | GMDCSA24 `Subject 2/Fall/02.mp4` | 0.70–8.43 | Right side fall on the ground after walking | 2.7–8.0 | 7.87–13.17 |
+| 3 | 13.60–19.07 | GMDCSA24 `Subject 3/Fall/04.mp4` | 0.00–5.47 | Walking and then falling backward on the floor | 1.2–5.0 | 14.80–18.60 |
+| 4 | 19.07–25.07 | GMDCSA24 `Subject 2/Fall/17.mp4` | 0.50–6.50 | Walking then falling forward | 2.5–6.0 | 21.07–24.57 |
+| 5 | 25.07–31.17 | GMDCSA24 `Subject 1/Fall/11.mp4` | 0.00–6.10 (whole clip) | Standing position to falling (backward) | 1.0–6.0 | 26.07–31.07 |
+| 6 | 31.17–39.60 | GMDCSA24 `Subject 2/Fall/13.mp4` (night, 640x480) | 0.50–8.92 | Falling backward (side view) | 2.5–8.0 | 33.17–38.67 |
+| 7 | 39.60–45.67 | GMDCSA24 `Subject 3/Fall/16.mp4` (night) | 0.00–6.08 (whole clip) | Walking and then falling left side on the floor | 1.8–7.0 (clip ends at 6.08) | 41.40–45.67 |
+| 8 | 45.67–51.60 | GMDCSA24 `Subject 2/Fall/23.mp4` | 1.60–7.53 | Standing then falling sideways | 3.6–7.0 | 47.67–51.07 |
+| 9 | 51.60–55.23 | Pexels `snow-pexels-20595440.mp4` (portrait) | 0.90–4.55 | Kicks a tree, falls backward into deep snow (no label) | ~2.9–3.6 (visual estimate) | ~53.60–54.30 |
+
+Labels and times for segments 1–8 come from the dataset CSV files (`Subject 1/Fall.csv`, `Subject 2/Fall.csv`,
+`Subject 3/Fall.csv`); segment 9 is a visual estimate (see below). Mix times are rounded to 0.01 s.
+
+Licenses of the mix: the GMDCSA24 footage is under the MIT License (notice and citation below; the license allows
+modified copies as long as the notice is kept), the snow footage is under the Pexels License (modification
+allowed). Source repository for segments 1–8:
+https://github.com/ekramalam/GMDCSA24-A-Dataset-for-Human-Fall-Detection-in-Videos.
 
 ## GMDCSA24 clips
 
@@ -51,7 +88,7 @@ Fall times are a visual estimate from 2–4 fps frame mosaics, not a ground-trut
 
 ### License
 
-Both clips are under the [Pexels License](https://www.pexels.com/license/): free to use and modify, attribution not
+The clip is under the [Pexels License](https://www.pexels.com/license/): free to use and modify, attribution not
 required (given above as a courtesy). The license does not allow selling unaltered copies or implying endorsement by
 the people shown.
 
@@ -64,5 +101,5 @@ the people shown.
 
 **These two files are redistributed unmodified under their own license (CC BY-NC-ND 4.0, © UniData),
 not under the repository's AGPL-3.0, for non-commercial study only.** Because the license does not allow
-derivatives, no annotated video, crop or GIF of them is included in this repository; only the measured alert
-times are reported in the README.
+derivatives, no annotated video, crop or GIF of them is included in this repository, and they are not part of
+the fall mix or of any other derivative; only the measured alert times are reported in the README.

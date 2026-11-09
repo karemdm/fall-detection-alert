@@ -10,14 +10,75 @@ H.264 720p without audio.
   fall ending on the side.
 - `snow-pexels-20595440_alert.mp4` + `snow-pexels-20595440_events.json`: outdoor, man kicks a tree, falls backward
   and lies in deep snow; the clip ends ~1 s after he lands (**no alert**, see below).
+- `fall_mix_alert.mp4` + `fall_mix_events.json`: the 55.2 s fall mix (eight GMDCSA24 falls of three subjects plus
+  the snow fall), run with **`--imgsz 1280`**; see [Fall mix](#fall-mix) below.
 
 Reproduce (from the repo root):
 
 ```bash
+fall-alert -i samples/fall_mix_input.mp4 -o outputs/fall_mix_alert.mp4 --events-json results/fall_mix_events.json --trace-csv outputs/fall_mix_trace.csv --imgsz 1280 --no-display
 fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --no-display
 fall-alert -i samples/gmdcsa24-s1-fall-11.mp4 -o outputs/fall-11.mp4 --events-json results/gmdcsa24-s1-fall-11_events.json --no-display
 fall-alert -i samples/snow-pexels-20595440.mp4 -o outputs/snow-20595440.mp4 --events-json results/snow-pexels-20595440_events.json --no-display
 ```
+
+## Fall mix
+
+Input: [`../samples/fall_mix_input.mp4`](../samples/README.md#fall-mix-fall_mix_inputmp4) (segment table, sources
+and licenses there). Default thresholds, `weights/yolo11n-pose.pt`, ByteTrack; nothing was tuned on the mix. The
+mix was run twice, at the default `--imgsz 640` and at `--imgsz 1280`; the published video and events are the
+**1280** run because it missed fewer falls (8/9 vs 6/9 hits). Times are mix seconds, from `fall_mix_events.json`
+and the `--trace-csv` output.
+
+Rule used: **hit** if an `ALERT` starts inside `[labelled fall start, labelled fall end + 2 s]` of the segment
+(clipped to the segment end), **miss** otherwise; a **false alert** is an `ALERT` starting outside every such
+window.
+
+| # | Segment | Labelled fall (mix s) | `FALLING` (1280) | `ALERT` (1280) | Result 1280 | `ALERT` (640) | Result 640 |
+|---|---|---|---|---|---|---|---|
+| 1 | S1 05, walking, right side fall | 1.80–5.00 | 2.20 | 3.27 (+1.47 s) | hit | 3.30 | hit |
+| 2 | S2 02, walking, right side fall | 7.87–13.17 | 8.33 | 12.10 (+4.23 s), one frame | hit (marginal) | none | miss |
+| 3 | S3 04, walking, backward fall | 14.80–18.60 | 15.07 | none | **miss** | none | miss |
+| 4 | S2 17, walking, forward fall | 21.07–24.57 | 21.70 | 22.73 (+1.66 s) | hit | 22.77 | hit |
+| 5 | S1 11, standing, backward fall | 26.07–31.07 | 27.13 (`FALLEN`) | 28.13 (+2.06 s) | hit | 28.23 | hit |
+| 6 | S2 13, night, backward fall (side view) | 33.17–38.67 | 34.37 | 35.67 (+2.50 s) | hit | 35.57 | hit |
+| 7 | S3 16, night, walking, left side fall | 41.40–45.67 | 41.57 | 44.00 (+2.60 s) | hit | none | miss |
+| 8 | S2 23, standing, sideways fall | 47.67–51.07 | 48.27 | 49.60 (+1.93 s) | hit | 49.43 | hit |
+| 9 | Pexels snow, backward fall (visual estimate) | ~53.60–54.30 | 53.23 | 55.13 (+1.53 s), 0.1 s before the end | hit | 55.20 (last frame) | hit |
+
+Summary (own measurement on one compilation, not a validation and not an accuracy figure):
+
+| `--imgsz` | Hits | Misses | False alerts |
+|---|---|---|---|
+| 1280 (published) | 8 / 9 | 1 (segment 3) | 0 |
+| 640 (default) | 6 / 9 | 3 (segments 2, 3, 7) | 0 |
+
+Observations (from the trace and frames of the annotated videos):
+
+- **Misses are detection losses on the floor, not rule failures.** In segments 2, 3 and 7 the person was tracked
+  `UPRIGHT` → `FALLING` (torso angle crossing 45°), but once lying on the patterned floor mat YOLO11n-pose
+  detected the body only in short bursts. Every new detection started a new track id, so the 1.0 s
+  `fallen_seconds` confirmation restarted again and again. At 1280 the detections on the floor were stable enough
+  in segments 2 and 7; in segment 3 (lying on the back across the frame, arms spread) the body was
+  detected only for a few frames at 18.03–19.00 s, too late and too short for the confirmation before the cut.
+- Segment 2 at 1280 is a **marginal** hit: after several id switches (#5 → #11 → #16) track #16 reached `ALERT`
+  at 12.10 s and was not detected again, so the alert lasted one frame in the events (the banner stays up to
+  `lost_seconds` = 2 s in the video).
+- Segment 9 alerted at 1280 and at 640, unlike the separate snow clip at 640 (no alert, see below). The mix
+  resamples the 60 fps clip to 30 fps and pads it into a 1280x720 frame, which changed the tracking (no id switch
+  on the snow); the alert fires only 0.1 s before the end of the mix, so this is a fragile result.
+- **No false alerts.** Non-fall postures that briefly entered `FALLING` / `FALLEN` (bending over at the start of
+  segments 6 and 8 at 640) returned to `UPRIGHT` without an alert. The hanging clothes on the left of the Subject 2
+  / Subject 3 room were sometimes detected as an extra `UPRIGHT` person; these tracks never left `UPRIGHT`.
+- **Cuts between segments.** The previous person's track is only dropped after `lost_seconds` (2 s) without a
+  detection, so the red banner of the last alert stays on for up to ~2 s into the next segment (visible in the demo
+  GIF), and at 31.20–31.33 s the alerting track #30 of segment 5 was briefly matched to the new person of
+  segment 6. These are artefacts of the hard cuts, not new alert events.
+- Delays from the labelled fall start to `ALERT` were 1.5–2.6 s on the clean hits; they include the time to reach
+  the floor and the 1.0 s confirmation by design.
+
+The demo GIF (`docs/assets/demo.gif`) is cut from this video: mix time 21.0–29.8 s (segments 4 and 5, 8 fps,
+720 px wide).
 
 ## What was measured
 
@@ -45,8 +106,9 @@ Observations (from the `--trace-csv` output and frames of the annotated videos):
   reaches the floor is expected by design.
 - No threshold was changed after looking at these clips; the values in `FallConfig` are the initial defaults.
 
-The demo GIF (`docs/assets/demo.gif`) is the output on a 12 s concatenation of the same two clips; the cut between
-them produced a new track id (#3) and a second alert (9.00 s, i.e. 3.13 s into the second clip).
+An earlier demo GIF was made from a 12 s concatenation of these two clips; the cut between them produced a new
+track id (#3) and a second alert (9.00 s, i.e. 3.13 s into the second clip). The current GIF comes from the
+[fall mix](#fall-mix).
 
 ## Snow clips (outdoor, Pexels)
 
@@ -73,8 +135,9 @@ Observations (from the trace and frames of the annotated videos):
 ## Source footage
 
 GMDCSA24 dataset (Ekram Alam et al.), MIT License — see [../samples/README.md](../samples/README.md) for links,
-license notice and citation. The subject is an adult who, according to the dataset authors, consented to the
-recording. The outputs are shown only to illustrate the method.
+license notice and citation. The subjects (Subjects 1, 2 and 3 in the fall mix) are adults who, according to the
+dataset authors, consented to the recording. The outputs are shown only to illustrate the method. The UniData clips
+(CC BY-NC-ND) are not used in the fall mix or in any annotated output.
 
-Snow clips: Pexels (Gustavo Fring; Ovais Ibn farooq), [Pexels License](https://www.pexels.com/license/) — see
+Snow clip: Pexels (Ovais Ibn farooq), [Pexels License](https://www.pexels.com/license/) — see
 [../samples/README.md](../samples/README.md#snow-clips-pexels) for links.
