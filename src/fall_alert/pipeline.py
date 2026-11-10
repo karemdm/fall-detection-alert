@@ -67,7 +67,7 @@ def run(cfg: RunConfig) -> int:
         return 1
     width, height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    if not fps or math.isnan(fps):
+    if not fps or math.isnan(fps) or fps <= 0:
         fps = 30.0
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     logger.info("Input: %dx%d @ %.2f FPS, %d frames", width, height, fps, total)
@@ -75,23 +75,31 @@ def run(cfg: RunConfig) -> int:
     for path in (cfg.output_path, cfg.events_json, cfg.trace_csv):
         if path and os.path.dirname(path):
             os.makedirs(os.path.dirname(path), exist_ok=True)
-    writer = cv2.VideoWriter(cfg.output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
-    logger.info("Loading pose model %s", cfg.model)
-    model = YOLO(cfg.model)
+    writer = None
+    trace_file = None
     monitor = FallMonitor(cfg.fall)
-    trace_file = open(cfg.trace_csv, "w", newline="", encoding="utf-8") if cfg.trace_csv else None
-    trace = csv.writer(trace_file) if trace_file else None
-    if trace:
-        trace.writerow(TRACE_FIELDS)
-    if cfg.display:
-        cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
-
     frame_idx, start = 0, time.time()
     try:
+        logger.info("Loading pose model %s", cfg.model)
+        model = YOLO(cfg.model)
+        trace_file = open(cfg.trace_csv, "w", newline="", encoding="utf-8") if cfg.trace_csv else None
+        trace = csv.writer(trace_file) if trace_file else None
+        if trace:
+            trace.writerow(TRACE_FIELDS)
+        if cfg.display:
+            cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+
         while True:
             ok, frame = cap.read()
             if not ok:
                 break
+            if writer is None:
+                # Size from the decoded frame: container metadata can be missing or differ.
+                size = (frame.shape[1], frame.shape[0])
+                writer = cv2.VideoWriter(cfg.output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
+                if not writer.isOpened():
+                    logger.error("Cannot open output video for writing: %s", cfg.output_path)
+                    return 1
             pos_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
             t = pos_ms / 1000.0 if pos_ms and pos_ms > 0 else frame_idx / fps
             frame_idx += 1
@@ -100,12 +108,12 @@ def run(cfg: RunConfig) -> int:
             )[0]
             persons = extract_persons(result)
             features = {tid: compute_features(kps, box, cfg.fall.min_kp_conf) for tid, (box, kps) in persons.items()}
+            n_events = len(monitor.events)
             statuses = monitor.update(t, features)
-            for event in monitor.events:
-                if event.start == t:
-                    sys.stdout.write("\n")
-                    sys.stdout.flush()
-                    logger.info("ALERT track #%s at %.2f s (falling since %.2f s)", event.track_id, t, event.fall_start)
+            for event in monitor.events[n_events:]:
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                logger.info("ALERT track #%s at %.2f s (falling since %.2f s)", event.track_id, t, event.fall_start)
             if trace:
                 for tid, st in statuses.items():
                     f = st.features
@@ -126,12 +134,16 @@ def run(cfg: RunConfig) -> int:
     finally:
         sys.stdout.write("\n")
         cap.release()
-        writer.release()
+        if writer is not None:
+            writer.release()
         if trace_file:
             trace_file.close()
         if cfg.display:
             cv2.destroyAllWindows()
 
+    if writer is None:
+        logger.error("No frame could be read from %s; no output written", cfg.input_path)
+        return 1
     events = monitor.finish()
     logger.info("Output saved to %s (%d alert event(s))", cfg.output_path, len(events))
     for e in events:

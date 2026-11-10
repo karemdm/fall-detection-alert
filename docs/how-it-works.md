@@ -86,13 +86,21 @@ flowchart TD
     A -- "upright held 2.0 s" --> U
 ```
 
-- The time `fall_start` of the `UPRIGHT → FALLING` transition is stored and
-  reported with the alert.
-- A track that is not detected for `lost_seconds` (2 s) is dropped; an open alert
-  is closed with the time it was last seen (`end_reason: "lost"`).
+- `fall_start` is the time of the latest entry into `FALLING` and is reported with
+  the alert. It is set on `UPRIGHT → FALLING` and set again on `FALLEN → FALLING`;
+  a new track id starts its own state machine in `UPRIGHT`, so after an id switch
+  `fall_start` belongs to the new track.
+- A single frame can pass several transitions: a lying posture seen in `UPRIGHT`
+  goes straight to `FALLEN` (via `FALLING`).
+- The upright timer for recovery counts consecutive upright frames; any
+  non-upright frame restarts it.
+- A track that is not detected for more than `lost_seconds` (2 s) is dropped; an
+  open alert is closed with the time it was last seen (`end_reason: "lost"`). A
+  track that reappears later with the same id starts again in `UPRIGHT`.
 - At the end of the video, open alerts are closed with `end_reason: "end_of_video"`.
 - Timestamps are video time from `CAP_PROP_POS_MSEC` (falls back to
-  `frame_index / fps`), so the logic does not depend on processing speed.
+  `frame_index / fps`, with 30 FPS if the container reports none), so the logic
+  does not depend on processing speed.
 
 ## 5. Parameter guide and tuning tips
 
@@ -116,7 +124,7 @@ Tips:
 
 - Run with `--trace-csv trace.csv` and plot `torso_angle`, `aspect_ratio` and
   `velocity` per track to see how far your footage is from each threshold.
-- On the two sample clips the hip velocity peaked at 0.70 and 0.60 H/s (see
+- On the two GMDCSA24 single clips the hip velocity peaked at 0.70 and 0.60 H/s (see
   [results/README.md](../results/README.md)), below the 0.8 default, so `FALLING`
   was started by the torso angle. Lowering `fall_velocity` (e.g. 0.5) makes
   `FALLING` start earlier but also reacts to sitting down quickly; it does not

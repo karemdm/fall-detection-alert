@@ -60,6 +60,7 @@ class RunConfig:
         imgsz: Inference image size.
         tracker: Ultralytics tracker config (``bytetrack.yaml`` or ``botsort.yaml``).
         display: Show a live preview window.
+        draw_skeleton: Also draw the pose keypoints and skeleton.
         events_json: Optional path of the alert-event JSON file.
         trace_csv: Optional path of a per-frame, per-track feature CSV (for tuning).
         fall: Fall-rule thresholds.

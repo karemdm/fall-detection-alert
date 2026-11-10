@@ -8,7 +8,6 @@ turns those features into an alert once a lying posture is held for a configurab
 video and, optionally, a JSON list of alert events.
 
 ![demo](docs/assets/demo.gif)
-<!-- add a short demo GIF here -->
 
 *Demo: two falls from the [fall mix](#fall-mix) (`--imgsz 1280`). Footage: GMDCSA24 (MIT) and, in the full mix,
 Pexels (Pexels License); see [samples/README.md](samples/README.md).*
@@ -104,9 +103,9 @@ are reported (no annotated video):
 
 For small or distant people, run with `--imgsz 1280`.
 
-No false alerts on any clip. The snow misses are explained by the rules: a fall that ends **sitting** never meets
-the lying rule, and the second clip ends before the 1.0 s `fallen_seconds` confirmation (an ID switch at 4.1 s also
-restarted the timer). Details in [results/README.md](results/README.md#snow-clips-outdoor-pexels).
+No false alerts on any clip. The snow clip was detected (`FALLEN`) but ends before the 1.0 s `fallen_seconds`
+confirmation (an ID switch at 4.1 s also restarted the timer). Details in
+[results/README.md](results/README.md#snow-clips-outdoor-pexels).
 
 Event files, observations and attribution: [results/README.md](results/README.md).
 
@@ -226,7 +225,7 @@ fall-detection-alert/
 Run the tests with `pytest`, or without it (standard library only):
 
 ```bash
-python -c "import sys; sys.path[:0]=['src','tests']; import test_state_machine as t; [f() for n, f in vars(t).items() if n.startswith('test_')]"
+python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('test_features','test_state_machine','test_monitor') for n, f in vars(importlib.import_module(m)).items() if n.startswith('test_')]"
 ```
 
 ## Limitations
@@ -259,10 +258,14 @@ python -c "import sys; sys.path[:0]=['src','tests']; import test_state_machine a
   (Ekram Alam et al.) — MIT; see [samples/README.md](samples/README.md) for the citation.
 - Snow clip from [Pexels](https://www.pexels.com) (Ovais Ibn farooq) — [Pexels License](https://www.pexels.com/license/);
   see [samples/README.md](samples/README.md#snow-clips-pexels).
+- UniData "Fall Detection" samples ([ud-smart-city/fall-detection](https://huggingface.co/datasets/ud-smart-city/fall-detection))
+  — CC BY-NC-ND 4.0; used only for the measured times above, see
+  [samples/README.md](samples/README.md#unidata-fall-detection-samples-cc-by-nc-nd-40).
 
 See [weights/README.md](weights/README.md) for model files and sizes.
 
 ## License
 
 AGPL-3.0, because the project depends on Ultralytics YOLO (AGPL-3.0). See the `LICENSE` file.
-The sample clips keep their own licenses (GMDCSA24: MIT; snow clips: Pexels License; see [samples/README.md](samples/README.md)).
+The sample clips keep their own licenses (GMDCSA24: MIT; snow clip: Pexels License; UniData samples: CC BY-NC-ND 4.0,
+redistributed unmodified and not used in any derivative; see [samples/README.md](samples/README.md)).

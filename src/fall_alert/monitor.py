@@ -72,7 +72,9 @@ class FallMonitor:
         """
         out: Dict[Hashable, TrackStatus] = {}
         for track_id, f in observations.items():
-            machine = self._machines.setdefault(track_id, FallStateMachine(self.cfg))
+            machine = self._machines.get(track_id)
+            if machine is None:
+                machine = self._machines[track_id] = FallStateMachine(self.cfg)
             state = machine.update(t, f)
             self._last_seen[track_id] = t
             if state == ALERT and track_id not in self._open:

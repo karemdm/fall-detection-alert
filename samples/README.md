@@ -1,8 +1,10 @@
 # Sample clips
 
 Two indoor test clips from the **GMDCSA24** human fall detection dataset (copied unmodified, original audio
-included), one outdoor snow clip from **Pexels** (see [Snow clips (Pexels)](#snow-clips-pexels)) and a
-**fall mix** compiled from GMDCSA24 and Pexels footage (see [Fall mix](#fall-mix-fall_mix_inputmp4)).
+included), one outdoor snow clip from **Pexels** (see [Snow clips (Pexels)](#snow-clips-pexels)), a
+**fall mix** compiled from GMDCSA24 and Pexels footage (see [Fall mix](#fall-mix-fall_mix_inputmp4)) and two
+**UniData** samples under CC BY-NC-ND 4.0 (see [UniData](#unidata-fall-detection-samples-cc-by-nc-nd-40)).
+Each file keeps its own license; none of them is covered by the repository's AGPL-3.0.
 
 ## Fall mix (`fall_mix_input.mp4`)
 
@@ -77,7 +79,7 @@ If you use these clips, cite the dataset:
 
 One outdoor clip of an adult falling in snow, downloaded from Pexels (1080p file) and copied with the audio track
 removed (`ffmpeg -c copy -an`, no re-encode, no trim). It is not a slip on ice: no suitable Pexels clip of an
-everyday slip on an icy walkway was found, so this is the closest real-time, full-body falls in snow.
+everyday slip on an icy walkway was found, so this real-time, full-body fall in snow is the closest match.
 
 | File | Source | Author | Duration, format | Content | Approx. fall (visual estimate) |
 |---|---|---|---|---|---|

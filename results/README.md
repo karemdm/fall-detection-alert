@@ -20,24 +20,28 @@ Reproduce (from the repo root):
 
 ```bash
 fall-alert -i samples/fall_mix_input.mp4 -o outputs/fall_mix_alert.mp4 --events-json results/fall_mix_events.json --trace-csv outputs/fall_mix_trace.csv --imgsz 1280 --no-display
-fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --no-display
-fall-alert -i samples/gmdcsa24-s1-fall-11.mp4 -o outputs/fall-11.mp4 --events-json results/gmdcsa24-s1-fall-11_events.json --no-display
-fall-alert -i samples/snow-pexels-20595440.mp4 -o outputs/snow-20595440.mp4 --events-json results/snow-pexels-20595440_events.json --no-display
+fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --conf 0.35 --no-display
+fall-alert -i samples/gmdcsa24-s1-fall-11.mp4 -o outputs/fall-11.mp4 --events-json results/gmdcsa24-s1-fall-11_events.json --conf 0.35 --no-display
+fall-alert -i samples/snow-pexels-20595440.mp4 -o outputs/snow-20595440.mp4 --events-json results/snow-pexels-20595440_events.json --conf 0.35 --no-display
 ```
+
+The single-clip commands pass `--conf 0.35` to match how the published single-clip files were produced.
 
 ## Fall mix
 
 Input: [`../samples/fall_mix_input.mp4`](../samples/README.md#fall-mix-fall_mix_inputmp4) (segment table, sources
 and licenses there). Default thresholds, `weights/yolo11n-pose.pt`, ByteTrack; nothing was tuned on the mix. The
-mix was run twice, at the default `--imgsz 640` and at `--imgsz 1280`; the published video and events are the
-**1280** run because it missed fewer falls (8/9 vs 6/9 hits). Times are mix seconds, from `fall_mix_events.json`
-and the `--trace-csv` output.
+mix was run three times: `--imgsz 640` and `--imgsz 1280` at the previous `--conf 0.35`, then `--imgsz 1280` at the
+current `--conf 0.30`. The published video and events are the last run (9/9 hits). Times are mix seconds, from
+`fall_mix_events.json` and the `--trace-csv` output.
 
 Rule used: **hit** if an `ALERT` starts inside `[labelled fall start, labelled fall end + 2 s]` of the segment
 (clipped to the segment end), **miss** otherwise; a **false alert** is an `ALERT` starting outside every such
 window.
 
-Columns "(1280)" are the current defaults (`--conf 0.30`, published video); "(640)" is the earlier run at `--conf 0.35`.
+Columns "(1280)" are the published run (`--imgsz 1280`, `--conf 0.30`); "(640)" is the earlier run at `--conf 0.35`.
+`FALLING` (1280) is the first `FALLING` of the segment in the trace; the `fall_start` in the events JSON can be later
+when the alerting track is a newer track id or re-entered `FALLING` from `FALLEN` (segments 2, 3 and 7).
 
 | # | Segment | Labelled fall (mix s) | `FALLING` (1280) | `ALERT` (1280) | Result 1280 | `ALERT` (640) | Result 640 |
 |---|---|---|---|---|---|---|---|
@@ -53,22 +57,23 @@ Columns "(1280)" are the current defaults (`--conf 0.30`, published video); "(64
 
 Summary (own measurement on one compilation, not a validation and not an accuracy figure):
 
-| `--imgsz` | Hits | Misses | False alerts |
+| Run | Hits | Misses | False alerts |
 |---|---|---|---|
-| 1280 (published) | 8 / 9 | 1 (segment 3) | 0 |
-| 640 (default) | 6 / 9 | 3 (segments 2, 3, 7) | 0 |
+| `--imgsz 1280`, `--conf 0.30` (published) | 9 / 9 | 0 | 0 |
+| `--imgsz 1280`, `--conf 0.35` (previous run) | 8 / 9 | 1 (segment 3) | 0 |
+| `--imgsz 640`, `--conf 0.35` (previous run) | 6 / 9 | 3 (segments 2, 3, 7) | 0 |
 
 Observations (from the trace and frames of the annotated videos):
 
-- **Misses are detection losses on the floor, not rule failures.** In segments 2, 3 and 7 the person was tracked
-  `UPRIGHT` → `FALLING` (torso angle crossing 45°), but once lying on the patterned floor mat YOLO11n-pose
-  detected the body only in short bursts. Every new detection started a new track id, so the 1.0 s
-  `fallen_seconds` confirmation restarted again and again. At 1280 the detections on the floor were stable enough
-  in segments 2 and 7; in segment 3 (lying on the back across the frame, arms spread) the body was
-  detected only for a few frames at 18.03–19.00 s, too late and too short for the confirmation before the cut.
-- Segment 2 at 1280 is a **marginal** hit: after several id switches (#5 → #11 → #16) track #16 reached `ALERT`
-  at 12.10 s and was not detected again, so the alert lasted one frame in the events (the banner stays up to
-  `lost_seconds` = 2 s in the video).
+- **Misses in the previous runs were detection losses on the floor, not rule failures.** In segments 2, 3 and 7
+  the person was tracked `UPRIGHT` → `FALLING` (torso angle crossing 45°), but once lying on the patterned floor
+  mat YOLO11n-pose detected the body only in short bursts. Every new detection started a new track id, so the
+  1.0 s `fallen_seconds` confirmation restarted again and again. At 1280 / `--conf 0.35` the detections on the
+  floor were stable enough in segments 2 and 7 but not in segment 3 (lying on the back across the frame, arms
+  spread). Lowering `--conf` to 0.30 kept the lying person detected long enough in segment 3 as well.
+- Segments 2 and 3 are **late** hits in the published run (+4.0 s): the alerting tracks (#27, #38) are newer track
+  ids whose `FALLING` started at 10.77 s and 17.83 s, and both were lost shortly after the alert (12.83 s and
+  19.00 s, `end_reason: lost`); the banner stays up to `lost_seconds` = 2 s longer in the video.
 - Segment 9 alerted at 1280 and at 640, unlike the separate snow clip at 640 (no alert, see below). The mix
   resamples the 60 fps clip to 30 fps and pads it into a 1280x720 frame, which changed the tracking (no id switch
   on the snow); the alert fires only 0.1 s before the end of the mix, so this is a fragile result.
@@ -77,7 +82,7 @@ Observations (from the trace and frames of the annotated videos):
   / Subject 3 room were sometimes detected as an extra `UPRIGHT` person; these tracks never left `UPRIGHT`.
 - **Cuts between segments.** The previous person's track is only dropped after `lost_seconds` (2 s) without a
   detection, so the red banner of the last alert stays on for up to ~2 s into the next segment (visible in the demo
-  GIF), and at 31.20–31.33 s the alerting track #30 of segment 5 was briefly matched to the new person of
+  GIF), and at 31.20–31.33 s the alerting track #44 of segment 5 was briefly matched to the new person of
   segment 6. These are artefacts of the hard cuts, not new alert events.
 - Delays from the labelled fall start to `ALERT` were 1.5–2.6 s on the clean hits; they include the time to reach
   the floor and the 1.0 s confirmation by design.

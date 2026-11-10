@@ -39,17 +39,18 @@ def display_available() -> bool:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Creates the argument parser; threshold defaults come from :class:`FallConfig`."""
+    """Creates the argument parser; defaults come from :class:`RunConfig` and :class:`FallConfig`."""
     p = argparse.ArgumentParser(
         prog="fall-alert",
         description="Rule-based fall detection on Ultralytics YOLO pose keypoints with tracking.",
     )
     p.add_argument("-i", "--input", required=True, help="Input video path.")
     p.add_argument("-o", "--output", required=True, help="Annotated output MP4 path.")
+    run_defaults = {f.name: f.default for f in fields(RunConfig)}
     p.add_argument("--model", default=DEFAULT_MODEL, help="Pose weights path or official name (default: %(default)s).")
-    p.add_argument("--conf", type=float, default=0.30, help="Detection confidence threshold (default: %(default)s).")
-    p.add_argument("--imgsz", type=int, default=640, help="Inference image size (default: %(default)s).")
-    p.add_argument("--tracker", default="bytetrack.yaml", help="Ultralytics tracker config (default: %(default)s).")
+    p.add_argument("--conf", type=float, default=run_defaults["conf"], help="Detection confidence threshold (default: %(default)s).")
+    p.add_argument("--imgsz", type=int, default=run_defaults["imgsz"], help="Inference image size (default: %(default)s).")
+    p.add_argument("--tracker", default=run_defaults["tracker"], help="Ultralytics tracker config (default: %(default)s).")
     p.add_argument("--events-json", help="Write alert events (track id, fall/alert start, end) to this JSON file.")
     p.add_argument("--trace-csv", help="Write per-frame, per-track features and states to this CSV file.")
     p.add_argument("--no-display", action="store_true", help="Do not open the preview window (implied without a display).")
