@@ -87,16 +87,24 @@ flowchart TD
 ```
 
 - `fall_start` is the time of the latest entry into `FALLING` and is reported with
-  the alert. It is set on `UPRIGHT → FALLING` and set again on `FALLEN → FALLING`;
-  a new track id starts its own state machine in `UPRIGHT`, so after an id switch
-  `fall_start` belongs to the new track.
+  the alert. It is set on `UPRIGHT → FALLING` and set again on `FALLEN → FALLING`.
+- A track leaves `UPRIGHT` only once it is *armed*: one frame with at least
+  `min_pose_keypoints` (6) keypoints above `min_kp_conf`. Objects detected as a
+  person (bins, coats, shadows) rarely show a body pose, so they never fall.
+- Id-switch repair: when a new track id appears within `stitch_distance` (1.0 body
+  heights) of a track lost less than `lost_seconds` ago, it takes over that track's
+  state machine and open alert. During a fall the box goes from tall to wide and
+  trackers often start a new id; without the repair the 1.0 s confirmation would
+  restart. Other new ids start their own state machine in `UPRIGHT`.
 - A single frame can pass several transitions: a lying posture seen in `UPRIGHT`
   goes straight to `FALLEN` (via `FALLING`).
 - The upright timer for recovery counts consecutive upright frames; any
   non-upright frame restarts it.
 - A track that is not detected for more than `lost_seconds` (2 s) is dropped; an
   open alert is closed with the time it was last seen (`end_reason: "lost"`). A
-  track that reappears later with the same id starts again in `UPRIGHT`.
+  track that reappears later with the same id starts again in `UPRIGHT`. The alert
+  banner only lists tracks seen within the last `lying_gap` seconds, so it clears as
+  soon as the person leaves the screen.
 - At the end of the video, open alerts are closed with `end_reason: "end_of_video"`.
 - Timestamps are video time from `CAP_PROP_POS_MSEC` (falls back to
   `frame_index / fps`, with 30 FPS if the container reports none), so the logic
@@ -119,6 +127,8 @@ flowchart TD
 | `falling_timeout` | 2.0 s | Longer wait for a lying posture after a suspicious motion. |
 | `recover_seconds` | 2.0 s | The person must stand longer before the alert ends. |
 | `lost_seconds` | 2.0 s | Tracks survive longer occlusions. |
+| `min_pose_keypoints` | 6 | Stricter filter against objects detected as a person; a person seen only partly may never be armed. |
+| `stitch_distance` | 1.0 body heights | Repairs id switches further away, with more risk of merging two nearby people. |
 
 Tips:
 
