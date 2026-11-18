@@ -30,6 +30,9 @@ class FallConfig:
         falling_timeout: ``FALLING`` without lying for this long returns to ``UPRIGHT``.
         recover_seconds: Upright posture held this long ends ``ALERT``.
         lost_seconds: A track not seen for this long is dropped (its open alert is closed).
+        min_pose_keypoints: A track can fall only after at least one frame with this many
+            keypoints above ``min_kp_conf``. Rejects objects detected as a person (bins, coats,
+            shadows), which rarely show a body pose; ``0`` disables the check.
     """
 
     min_kp_conf: float = 0.5
@@ -46,6 +49,7 @@ class FallConfig:
     falling_timeout: float = 2.0
     recover_seconds: float = 2.0
     lost_seconds: float = 2.0
+    min_pose_keypoints: float = 6
 
 
 @dataclass

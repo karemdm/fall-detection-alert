@@ -34,12 +34,14 @@ class PoseFeatures:
         aspect_ratio: Box width / height.
         hip_y: Vertical image position of the hip midpoint, or ``None`` if gated out.
         box_height: Box height in pixels.
+        visible_keypoints: Number of keypoints at or above the confidence gate.
     """
 
     torso_angle: Optional[float]
     aspect_ratio: float
     hip_y: Optional[float]
     box_height: float
+    visible_keypoints: int = 17
 
 
 def visible_midpoint(a: Keypoint, b: Keypoint, min_conf: float) -> Optional[Point]:
@@ -103,4 +105,5 @@ def compute_features(keypoints: Sequence[Keypoint], box: Box, min_conf: float) -
         aspect_ratio=aspect_ratio(box),
         hip_y=hips[1] if hips else None,
         box_height=max(0.0, box[3] - box[1]),
+        visible_keypoints=sum(1 for k in keypoints if k[2] >= min_conf),
     )

@@ -11,6 +11,10 @@ States::
     FALLEN  --(lying held for fallen_seconds)--> ALERT
     FALLEN  --(not lying for longer than lying_gap)--> FALLING
     ALERT   --(upright held for recover_seconds)--> UPRIGHT
+
+A track can leave ``UPRIGHT`` only after it has been "armed" by one frame with at
+least ``min_pose_keypoints`` confident keypoints. Objects detected as a person
+(bins, coats, shadows) rarely show a body pose, so they cannot raise alerts.
 """
 
 from __future__ import annotations
@@ -96,6 +100,7 @@ class FallStateMachine:
         self._lying_since: Optional[float] = None
         self._last_lying: Optional[float] = None
         self._upright_since: Optional[float] = None
+        self.armed = cfg.min_pose_keypoints <= 0
 
     def update(self, t: float, f: PoseFeatures) -> str:
         """Advances the state machine with the features observed at time ``t``.
@@ -111,6 +116,8 @@ class FallStateMachine:
         self.motion.update(t, f)
         self.velocity = self.motion.velocity()
         lying = is_lying(f, cfg)
+        if not self.armed and f.visible_keypoints >= cfg.min_pose_keypoints:
+            self.armed = True
         if lying:
             self._last_lying = t
         if is_upright(f, cfg):
@@ -122,7 +129,7 @@ class FallStateMachine:
         if self.state == UPRIGHT:
             fast = self.velocity is not None and self.velocity >= cfg.fall_velocity
             tilted = f.torso_angle is not None and f.torso_angle >= cfg.falling_angle
-            if fast or tilted or lying:
+            if self.armed and (fast or tilted or lying):
                 self.state, self.fall_start = FALLING, t
         if self.state == FALLING:
             if lying:
