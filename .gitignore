@@ -27,3 +27,6 @@ runs/
 
 # local-only experiments (third-party / no-derivatives material)
 local_test/
+
+# Official weights auto-downloaded by Ultralytics into the working directory
+/*.pt
