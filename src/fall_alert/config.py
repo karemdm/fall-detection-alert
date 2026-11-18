@@ -33,6 +33,9 @@ class FallConfig:
         min_pose_keypoints: A track can fall only after at least one frame with this many
             keypoints above ``min_kp_conf``. Rejects objects detected as a person (bins, coats,
             shadows), which rarely show a body pose; ``0`` disables the check.
+        stitch_distance: A new track that starts within this distance (in body heights) of a
+            track lost less than ``lost_seconds`` ago continues that track's state and alert.
+            Handles tracker id switches when the box changes shape during a fall; ``0`` disables.
     """
 
     min_kp_conf: float = 0.5
@@ -50,6 +53,7 @@ class FallConfig:
     recover_seconds: float = 2.0
     lost_seconds: float = 2.0
     min_pose_keypoints: float = 6
+    stitch_distance: float = 1.0
 
 
 @dataclass

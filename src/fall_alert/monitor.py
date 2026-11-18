@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Dict, Hashable, List, Mapping, Optional
+import math
+from typing import Dict, Hashable, List, Mapping, Optional, Tuple
 
 from fall_alert.config import FallConfig
 from fall_alert.features import PoseFeatures
@@ -59,13 +60,22 @@ class FallMonitor:
         self._machines: Dict[Hashable, FallStateMachine] = {}
         self._last_seen: Dict[Hashable, float] = {}
         self._open: Dict[Hashable, AlertEvent] = {}
+        self._last_pos: Dict[Hashable, Tuple[float, float]] = {}
+        self.stitched: List[Tuple[Hashable, Hashable, float]] = []
 
-    def update(self, t: float, observations: Mapping[Hashable, PoseFeatures]) -> Dict[Hashable, TrackStatus]:
+    def update(
+        self,
+        t: float,
+        observations: Mapping[Hashable, PoseFeatures],
+        positions: Optional[Mapping[Hashable, Tuple[float, float]]] = None,
+    ) -> Dict[Hashable, TrackStatus]:
         """Updates every observed track at time ``t`` and drops lost tracks.
 
         Args:
             t: Video time in seconds.
             observations: Features per track id in the current frame.
+            positions: Optional box center per track id; enables stitching of a new track to a
+                recently lost one (see ``FallConfig.stitch_distance``).
 
         Returns:
             Status per observed track id.
@@ -73,8 +83,12 @@ class FallMonitor:
         out: Dict[Hashable, TrackStatus] = {}
         for track_id, f in observations.items():
             machine = self._machines.get(track_id)
+            if machine is None and positions is not None and track_id in positions:
+                machine = self._stitch(t, track_id, f, positions[track_id], observations)
             if machine is None:
                 machine = self._machines[track_id] = FallStateMachine(self.cfg)
+            if positions is not None and track_id in positions:
+                self._last_pos[track_id] = positions[track_id]
             state = machine.update(t, f)
             self._last_seen[track_id] = t
             if state == ALERT and track_id not in self._open:
@@ -88,7 +102,32 @@ class FallMonitor:
             if track_id in self._open:
                 self._close(track_id, self._last_seen[track_id], "lost")
             del self._machines[track_id], self._last_seen[track_id]
+            self._last_pos.pop(track_id, None)
         return out
+
+    def _stitch(self, t, track_id, f, pos, observations) -> Optional[FallStateMachine]:
+        """Moves the nearest recently lost track (state machine and open alert) to ``track_id``."""
+        if self.cfg.stitch_distance <= 0:
+            return None
+        best, best_d = None, None
+        for old_id, seen in self._last_seen.items():
+            if old_id in observations or seen >= t or t - seen > self.cfg.lost_seconds or old_id not in self._last_pos:
+                continue
+            ref = max(self._machines[old_id].motion.reference_height(), f.box_height, 1.0)
+            (x0, y0), (x1, y1) = self._last_pos[old_id], pos
+            d = math.hypot(x1 - x0, y1 - y0) / ref
+            if d <= self.cfg.stitch_distance and (best_d is None or d < best_d):
+                best, best_d = old_id, d
+        if best is None:
+            return None
+        machine = self._machines.pop(best)
+        self._machines[track_id] = machine
+        self._last_seen.pop(best)
+        self._last_pos.pop(best, None)
+        if best in self._open:
+            self._open[track_id] = self._open.pop(best)
+        self.stitched.append((best, track_id, t))
+        return machine
 
     def finish(self) -> List[AlertEvent]:
         """Closes alerts still open at the end of the video and returns all events."""

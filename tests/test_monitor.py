@@ -74,3 +74,34 @@ def test_active_alerts_hide_tracks_not_on_screen():
     assert len(m.active_alerts()) == 1
     assert m.active_alerts(4.0, cfg.lying_gap) == []
     assert len(m.active_alerts(3.5, cfg.lying_gap)) == 1
+def run_at(monitor, start, end, observations, positions):
+    out = {}
+    n = int(round((end - start) / DT))
+    for i in range(n):
+        out = monitor.update(start + i * DT, observations, positions)
+    return out
+
+
+def test_id_switch_during_fall_keeps_state_and_alert():
+    m = FallMonitor(FallConfig())
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+    run_at(m, 1.0, 1.5, {1: LYING}, {1: (320.0, 600.0)})
+    # the tracker gives the person on the floor a new id a bit further down
+    out = run_at(m, 1.6, 3.0, {2: LYING}, {2: (340.0, 640.0)})
+    assert out[2].state == ALERT
+    assert m.stitched and m.stitched[0][:2] == (1, 2)
+    assert len(m.events) == 1 and m.events[0].fall_start == 1.0
+
+
+def test_far_new_track_is_not_stitched():
+    m = FallMonitor(FallConfig())
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (100.0, 400.0)})
+    run_at(m, 1.0, 1.5, {2: STANDING}, {2: (1200.0, 400.0)})
+    assert m.stitched == []
+
+
+def test_stitching_can_be_disabled():
+    m = FallMonitor(FallConfig(stitch_distance=0))
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+    run_at(m, 1.1, 1.5, {2: STANDING}, {2: (300.0, 400.0)})
+    assert m.stitched == []

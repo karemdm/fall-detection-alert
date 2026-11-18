@@ -20,6 +20,8 @@ Pexels (Pexels License); see [samples/README.md](samples/README.md).*
 - Per-track state machine with recovery (`ALERT` ends after the person is upright for a while).
 - Object filter: a track can only fall after it showed a body pose (at least 6 confident keypoints) in one frame,
   so bins, coats and shadows detected as a person do not raise alerts.
+- Id-switch repair: when the tracker gives a fallen person a new id, the new track continues the old one's state
+  and alert if it starts close to where the old one was lost.
 - Annotated MP4 at the input FPS: box colored by state, `state | angle` label, alert banner with time (pose skeleton optional with `--draw-skeleton`).
 - `--events-json` export (track id, fall start, alert start/end, end reason) and `--trace-csv` per-frame features.
 - All thresholds in one dataclass and on the CLI; pure logic is standard-library only and unit tested.
@@ -170,6 +172,7 @@ fine for private testing but should not be committed.
 | `--recover-seconds` | `2.0` | Seconds of upright posture that end `ALERT`. |
 | `--lost-seconds` | `2.0` | Seconds without detection after which a track is dropped. |
 | `--min-pose-keypoints` | `6` | A track can fall only after one frame with at least this many keypoints above `--min-kp-conf`. Rejects objects detected as a person (bins, coats, shadows); `0` disables. |
+| `--stitch-distance` | `1.0` | A new track that starts within this many body heights of a track lost less than `--lost-seconds` ago continues its state and alert (repairs tracker id switches during a fall, when the box changes from tall to wide); `0` disables. |
 | `--log-level` | `INFO` | Logging verbosity. |
 
 ## Output
