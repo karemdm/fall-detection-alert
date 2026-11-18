@@ -28,6 +28,7 @@ THRESHOLD_HELP = {
     "falling_timeout": "Seconds in FALLING without lying before returning to UPRIGHT",
     "recover_seconds": "Seconds of upright posture that end ALERT",
     "lost_seconds": "Seconds without detection after which a track is dropped",
+    "min_pose_keypoints": "A track can fall only after one frame with at least this many confident keypoints (rejects objects detected as a person); 0 disables",
 }
 
 

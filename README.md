@@ -18,6 +18,8 @@ Pexels (Pexels License); see [samples/README.md](samples/README.md).*
 - Keypoint-confidence gating; falls back to the box aspect ratio when shoulders/hips are not visible.
 - Explainable rules: torso angle, aspect ratio, hip velocity normalized by body height, time thresholds.
 - Per-track state machine with recovery (`ALERT` ends after the person is upright for a while).
+- Object filter: a track can only fall after it showed a body pose (at least 6 confident keypoints) in one frame,
+  so bins, coats and shadows detected as a person do not raise alerts.
 - Annotated MP4 at the input FPS: box colored by state, `state | angle` label, alert banner with time (pose skeleton optional with `--draw-skeleton`).
 - `--events-json` export (track id, fall start, alert start/end, end reason) and `--trace-csv` per-frame features.
 - All thresholds in one dataclass and on the CLI; pure logic is standard-library only and unit tested.
@@ -167,6 +169,7 @@ fine for private testing but should not be committed.
 | `--falling-timeout` | `2.0` | Seconds in `FALLING` without lying before returning to `UPRIGHT`. |
 | `--recover-seconds` | `2.0` | Seconds of upright posture that end `ALERT`. |
 | `--lost-seconds` | `2.0` | Seconds without detection after which a track is dropped. |
+| `--min-pose-keypoints` | `6` | A track can fall only after one frame with at least this many keypoints above `--min-kp-conf`. Rejects objects detected as a person (bins, coats, shadows); `0` disables. |
 | `--log-level` | `INFO` | Logging verbosity. |
 
 ## Output

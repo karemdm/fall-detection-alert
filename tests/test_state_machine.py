@@ -129,3 +129,25 @@ def test_motion_history_velocity_and_reference_height():
     h.update(3.0, PoseFeatures(0.0, 0.3, None, 150.0))
     assert h.reference_height() == 150.0
     assert h.velocity() is None
+
+
+def test_object_without_body_pose_cannot_alert():
+    """A wide 'person' box with almost no confident keypoints (e.g. a bin) never leaves UPRIGHT."""
+    m = FallStateMachine(FallConfig())
+    object_like = PoseFeatures(torso_angle=None, aspect_ratio=1.6, hip_y=None, box_height=120.0, visible_keypoints=2)
+    assert set(feed(m, 0.0, 5.0, object_like)) == {UPRIGHT}
+    assert not m.armed
+
+
+def test_one_frame_with_a_body_pose_arms_the_track():
+    m = FallStateMachine(FallConfig())
+    weak_lying = PoseFeatures(torso_angle=88.0, aspect_ratio=2.5, hip_y=650.0, box_height=180.0, visible_keypoints=3)
+    feed(m, 0.0, 0.1, LYING)
+    assert m.armed
+    assert ALERT in feed(m, 0.1, 3.0, weak_lying)
+
+
+def test_pose_gate_can_be_disabled():
+    m = FallStateMachine(FallConfig(min_pose_keypoints=0))
+    weak_lying = PoseFeatures(torso_angle=88.0, aspect_ratio=2.5, hip_y=650.0, box_height=180.0, visible_keypoints=0)
+    assert ALERT in feed(m, 0.0, 3.0, weak_lying)
