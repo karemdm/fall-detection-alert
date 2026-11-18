@@ -61,3 +61,16 @@ def test_finish_closes_open_events_and_serializes():
     d = events[0].to_dict()
     assert set(d) == {"track_id", "fall_start", "start", "end", "end_reason"}
     assert d["end"] == round(2.9, 3)
+
+
+def test_active_alerts_hide_tracks_not_on_screen():
+    cfg = FallConfig()
+    m = FallMonitor(cfg)
+    run(m, 0.0, 1.0, {1: STANDING})
+    run(m, 1.0, 3.5, {1: LYING})
+    assert len(m.active_alerts()) == 1
+    # the person leaves the frame: the event stays open until lost_seconds, but is not shown
+    m.update(4.0, {})
+    assert len(m.active_alerts()) == 1
+    assert m.active_alerts(4.0, cfg.lying_gap) == []
+    assert len(m.active_alerts(3.5, cfg.lying_gap)) == 1
