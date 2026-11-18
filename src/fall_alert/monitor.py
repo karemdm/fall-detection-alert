@@ -96,9 +96,18 @@ class FallMonitor:
             self._close(track_id, self._last_seen[track_id], "end_of_video")
         return self.events
 
-    def active_alerts(self) -> List[AlertEvent]:
-        """Currently open alert events."""
-        return list(self._open.values())
+    def active_alerts(self, t: Optional[float] = None, max_age: Optional[float] = None) -> List[AlertEvent]:
+        """Currently open alert events.
+
+        Args:
+            t: Current video time; needed with ``max_age``.
+            max_age: If given, only alerts whose track was seen within the last ``max_age`` seconds
+                (an alert stays open in the event log until the track is lost for ``lost_seconds``,
+                but its person is no longer on screen, so it should not be shown).
+        """
+        if max_age is None or t is None:
+            return list(self._open.values())
+        return [e for tid, e in self._open.items() if t - self._last_seen[tid] <= max_age]
 
     def _close(self, track_id: Hashable, t: float, reason: str) -> None:
         event = self._open.pop(track_id)

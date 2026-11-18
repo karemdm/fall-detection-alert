@@ -177,7 +177,9 @@ fine for private testing but should not be committed.
   - label `#<track id> <STATE> | <torso angle> deg` (`n/a` when the torso keypoints are gated out);
     `UPRIGHT` tracks with an `n/a` angle are not drawn, because they are mostly false person detections
     (objects, coats, shadows); falling, fallen and alert tracks are always drawn;
-  - red banner `FALL ALERT #<ids> since <t> s` while an alert is open, and the video time in the bottom-right corner.
+  - red banner `FALL ALERT #<ids> since <t> s` while an alert is open and its person is on screen (a track not seen for
+    more than `--lying-gap` seconds is hidden, although its event stays open until `--lost-seconds`), and the video
+    time in the bottom-right corner.
 - **Events JSON** (`--events-json`):
 
   ```json
