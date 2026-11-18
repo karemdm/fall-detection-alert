@@ -109,7 +109,8 @@ def run(cfg: RunConfig) -> int:
             persons = extract_persons(result)
             features = {tid: compute_features(kps, box, cfg.fall.min_kp_conf) for tid, (box, kps) in persons.items()}
             n_events = len(monitor.events)
-            statuses = monitor.update(t, features)
+            centers = {tid: ((b[0] + b[2]) / 2, (b[1] + b[3]) / 2) for tid, (b, _) in persons.items()}
+            statuses = monitor.update(t, features, centers)
             for event in monitor.events[n_events:]:
                 sys.stdout.write("\n")
                 sys.stdout.flush()
@@ -145,6 +146,9 @@ def run(cfg: RunConfig) -> int:
         logger.error("No frame could be read from %s; no output written", cfg.input_path)
         return 1
     events = monitor.finish()
+    if monitor.stitched:
+        logger.info("Stitched %d track id switch(es): %s", len(monitor.stitched),
+                    ", ".join(f"#{a}->#{b} at {t:.2f} s" for a, b, t in monitor.stitched))
     logger.info("Output saved to %s (%d alert event(s))", cfg.output_path, len(events))
     for e in events:
         logger.info("  track #%s: fall %.2f s, alert %.2f-%.2f s (%s)", e.track_id, e.fall_start, e.start, e.end,
