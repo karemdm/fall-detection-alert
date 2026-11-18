@@ -113,6 +113,38 @@ confirmation (an ID switch at 4.1 s also restarted the timer). Details in
 
 Event files, observations and attribution: [results/README.md](results/README.md).
 
+### Slips on ice (outdoor footage)
+
+[`docs/assets/demo_ice.mp4`](docs/assets/demo_ice.mp4) is a screen recording of the command running on three
+outdoor slips taken from [`samples/ice_3min.mp4`](samples/README.md#ice-compilation-ice_3minmp4) (a doorbell camera
+and two handheld phone clips, joined with 2.5 s black gaps so tracks end between scenes). Model loading and
+processing are sped up in the recording.
+
+[![Slips on ice demo](docs/assets/demo_ice.jpg)](docs/assets/demo_ice.mp4)
+
+```bash
+fall-alert -i local_test/ice_cut.mp4 -o local_test/ice_cut_alert.mp4 --model yolo26s-pose.pt --conf 0.20 --events-json local_test/ice_cut.json
+```
+
+All three falls raise an alert (1.0–1.1 s after `FALLING`, as configured). Configurations compared on these clips
+(alerts out of 3 on the cut; out of the 5–6 visible slips on the 55 s excerpt 1:05–2:00 of the compilation):
+
+| Pose model | `--imgsz` | `--conf` | Cut (3 falls) | 55 s excerpt |
+|---|---|---|---|---|
+| `yolo11n-pose` (default) | 640 | 0.30 | — | 2 |
+| `yolo11n-pose` | 640 | 0.20 | — | 2 |
+| `yolo11s-pose` | 640 | 0.30 | — | 2 |
+| `yolo11m-pose` | 640 | 0.30 | — | 3 |
+| `yolo26s-pose` | 640 | 0.30 | — | 4 (one at the excerpt start is uncertain) |
+| **`yolo26s-pose`** | **640** | **0.20** | **3** | **3** |
+| `yolo26s-pose` | 1280 | 0.20 | 2 | — |
+| `yolo26m-pose` | 640 | 0.20 | 1 | — |
+
+Own measurement on a few clips, not a validation. On small, handheld and portrait footage the newer
+`yolo26s-pose` keeps the person lying on the ground detected much longer than the nano model; a larger input size
+or the medium model did not help here (the clips are low resolution and upscaled). Misses come from the pose model
+losing the person on the ground, not from the rules.
+
 ## Usage
 
 ```bash

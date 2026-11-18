@@ -94,6 +94,13 @@ The clip is under the [Pexels License](https://www.pexels.com/license/): free to
 required (given above as a courtesy). The license does not allow selling unaltered copies or implying endorsement by
 the people shown.
 
+## Ice compilation (`ice_3min.mp4`)
+
+A 3-minute, 1280x720, 25 fps compilation of everyday slips on ice and snow from several sources (doorbell and
+security cameras, handheld phone clips with burned-in captions). Third-party footage: the original sources and
+their licenses are not documented here yet, so check them before redistributing the file or derived videos. Used
+for the outdoor demo in the main README (`docs/assets/demo_ice.mp4`, cut from 1:05–2:00).
+
 ## UniData "Fall Detection" samples (CC BY-NC-ND 4.0)
 
 | File | Source | License | Content (visual check) |
