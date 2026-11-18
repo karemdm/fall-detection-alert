@@ -148,7 +148,7 @@ All three falls raise an alert (1.0–1.1 s after `FALLING`, as configured). Con
 
 | Pose model | `--imgsz` | `--conf` | Cut (3 falls) | 55 s excerpt |
 |---|---|---|---|---|
-| `yolo11n-pose` (default) | 640 | 0.30 | — | 2 |
+| `yolo11n-pose` (default) | 640 | 0.30 | 1 | 2 |
 | `yolo11n-pose` | 640 | 0.20 | — | 2 |
 | `yolo11s-pose` | 640 | 0.30 | — | 2 |
 | `yolo11m-pose` | 640 | 0.30 | — | 3 |
