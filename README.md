@@ -9,8 +9,9 @@ video and, optionally, a JSON list of alert events.
 
 ![demo](docs/assets/demo.gif)
 
-*Demo: two falls from the [fall mix](#fall-mix) (`--imgsz 1280`). Footage: GMDCSA24 (MIT) and, in the full mix,
-Pexels (Pexels License); see [samples/README.md](samples/README.md).*
+*Demo: screen recording of `fall-alert` running on two GMDCSA24 clips, with the live preview, the log and the events
+JSON (model loading and processing sped up). Footage: GMDCSA24 (MIT); see [samples/README.md](samples/README.md).
+Annotated results on every clip: [Results](#results).*
 
 ## Features
 
@@ -31,11 +32,12 @@ Pexels (Pexels License); see [samples/README.md](samples/README.md).*
 ```mermaid
 flowchart TD
     A["Video frame"] --> B["YOLO11n-pose + ByteTrack<br/>box + 17 keypoints per track"]
-    B --> C["Gate shoulders / hips<br/>keypoint conf ≥ 0.5"]
+    B --> S["Id-switch repair<br/>new id next to a lost track continues it"]
+    S --> C["Gate shoulders / hips<br/>keypoint conf ≥ 0.5"]
     C --> D["Torso angle θ from vertical"]
     C --> E["Hip velocity v<br/>body heights / s"]
     B --> F["Box aspect ratio w / h"]
-    D --> G{"UPRIGHT:<br/>v ≥ 0.8 or θ ≥ 45° or lying?"}
+    D --> G{"UPRIGHT, armed by one body pose (≥ 6 keypoints):<br/>v ≥ 0.8 or θ ≥ 45° or lying?"}
     E --> G
     F --> G
     G -- yes --> H["FALLING"]
@@ -52,15 +54,30 @@ Formulas, the full state diagram and tuning tips: [docs/how-it-works.md](docs/ho
 
 ## Installation
 
+Linux / macOS:
+
 ```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate    Linux/macOS: source .venv/bin/activate
+git clone https://github.com/karemdm/fall-detection-alert.git
+cd fall-detection-alert
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .          # installs the `fall-alert` command
 ```
 
-The nano pose model runs on CPU (about 5–7 FPS at `imgsz=640` on the laptop CPU used for the results below).
-For a GPU, install the PyTorch build matching your CUDA version from [pytorch.org](https://pytorch.org) first.
+Windows (PowerShell):
+
+```powershell
+git clone https://github.com/karemdm/fall-detection-alert.git
+cd fall-detection-alert
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install -e .
+```
+
+The pose models run on CPU. For a GPU, install the PyTorch build matching your CUDA version from
+[pytorch.org](https://pytorch.org) first.
 
 ## Results
 
@@ -157,7 +174,7 @@ fall-alert -i input.mp4 -o outputs/out.mp4 --fallen-seconds 3 --lying-angle 70
 # Larger official model (auto-downloaded by Ultralytics), BoT-SORT, feature trace for tuning
 fall-alert -i input.mp4 -o outputs/out.mp4 --model yolo11s-pose.pt --tracker botsort.yaml --trace-csv outputs/trace.csv
 
-# Module form, without installing (from the repo root)
+# Module form, without installing (from the repo root; Windows PowerShell: $env:PYTHONPATH="src")
 PYTHONPATH=src python -m fall_alert --help
 ```
 
