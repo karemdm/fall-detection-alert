@@ -127,6 +127,8 @@ flowchart TD
 | `falling_timeout` | 2.0 s | Longer wait for a lying posture after a suspicious motion. |
 | `recover_seconds` | 2.0 s | The person must stand longer before the alert ends. |
 | `lost_seconds` | 2.0 s | Tracks survive longer occlusions. |
+| `min_pose_keypoints` | 6 | Stricter filter against objects detected as a person; a person seen only partly may never be armed. |
+| `stitch_distance` | 1.0 body heights | Repairs id switches further away, with more risk of merging two nearby people. |
 
 Tips:
 

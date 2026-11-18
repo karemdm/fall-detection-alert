@@ -90,7 +90,7 @@ labelled fall and joined without transitions. Default fall thresholds; colors: g
 
 | Run | Hits | Misses | False alerts | Alert delay after labelled fall start |
 |---|---|---|---|---|
-| `--imgsz 1280`, `--conf 0.30` (current defaults; published video) | **9 / 9** | 0 | 0 | 1.5–2.6 s; two late hits at +4.0 s (S2 02, S3 04) |
+| `--imgsz 1280`, `--conf 0.30` (default `--conf`; published video, see [why 1280](docs/how-it-works.md)) | **9 / 9** | 0 | 0 | 1.5–2.6 s; two late hits at +4.0 s (S2 02, S3 04) |
 | `--imgsz 1280`, `--conf 0.35` (previous run) | 8 / 9 | 1 (S3 04) | 0 | 1.5–2.6 s, one marginal hit at +4.2 s |
 | `--imgsz 640`, `--conf 0.35` (previous run) | 6 / 9 | 3 (S2 02, S3 04, S3 16) | 0 | 1.5–2.4 s |
 
@@ -257,9 +257,9 @@ fall-detection-alert/
 ├── requirements.txt
 ├── docs/
 │   ├── how-it-works.md
-│   └── assets/demo.gif
+│   └── assets/         # demo.gif, demo_ice.mp4 + poster
 ├── results/            # annotated example outputs + event JSON
-├── samples/            # GMDCSA24 test clips (MIT), Pexels snow clip, fall mix, UniData samples (CC BY-NC-ND)
+├── samples/            # GMDCSA24 test clips (MIT), Pexels snow clip, fall mix, UniData samples (CC BY-NC-ND), ice compilation
 ├── weights/
 │   ├── README.md
 │   └── yolo11n-pose.pt
@@ -289,8 +289,8 @@ python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('
 
 - **Research prototype, not a medical or certified safety device.** Do not rely on it to protect people; an alert
   (or its absence) must be checked by a person.
-- **Tested on a handful of clips only** (single clips plus one 55 s compilation of nine falls from three
-  GMDCSA24 subjects and one snow clip). No recall, false-alarm rate or latency statistics are claimed. Thresholds are generic starting values, not tuned on a dataset.
+- **Tested on a handful of clips only** (single clips, one 55 s compilation of eight GMDCSA24 falls from three
+  subjects plus one snow clip, and a doorbell / handheld compilation of slips on ice). No recall, false-alarm rate or latency statistics are claimed. Thresholds are generic starting values, not tuned on a dataset.
 - **Falls that end sitting are not detected** (torso stays upright, box not wide enough), and very short clips can end
   before the `fallen_seconds` confirmation (the latter happened on the snow clip).
 - **Lying on purpose looks like a fall** (bed, sofa, floor exercise) once the posture is held; slow falls and
