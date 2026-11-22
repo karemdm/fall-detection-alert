@@ -222,7 +222,8 @@ fine for private testing but should not be committed.
 | `--lost-seconds` | `2.0` | Seconds without detection after which a track is dropped. |
 | `--min-pose-keypoints` | `6` | A track can fall only after one frame with at least this many keypoints above `--min-kp-conf`. Rejects objects detected as a person (bins, coats, shadows); `0` disables. |
 | `--stitch-distance` | `1.0` | A new track that starts within this many body heights of a track lost less than `--lost-seconds` ago continues its state and alert (repairs tracker id switches during a fall, when the box changes from tall to wide); `0` disables. |
-| `--log-level` | `INFO` | Logging verbosity. |
+| `--log-level` | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
+| `--version` | — | Print the version and exit. |
 
 ## Output
 
@@ -242,9 +243,11 @@ fine for private testing but should not be committed.
    "events": [{"track_id": 1, "fall_start": 2.272, "start": 3.312, "end": 5.824, "end_reason": "end_of_video"}]}
   ```
 
-  `fall_start` is the `FALLING` entry time, `start`/`end` bound the `ALERT` state, `end_reason` is `recovered`,
+  `input` is the input file name. `fall_start` is the `FALLING` entry time, `start`/`end` bound the `ALERT` state, `end_reason` is `recovered`,
   `lost` or `end_of_video`. Times are seconds of video time.
-- **Trace CSV** (`--trace-csv`): `time, track_id, state, torso_angle, aspect_ratio, velocity, box_height`.
+- **Trace CSV** (`--trace-csv`): one row per track and frame with the columns `time, track_id, state, torso_angle,
+  aspect_ratio, velocity, box_height` (time in seconds with 3 decimals, `box_height` in pixels; `torso_angle` and
+  `velocity` are empty when not measurable).
 - Log lines when an alert starts and a summary of all events at the end.
 
 ## Project structure
