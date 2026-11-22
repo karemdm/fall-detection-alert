@@ -277,6 +277,7 @@ fall-detection-alert/
 │   ├── pipeline.py       # video loop, tracking, export
 │   └── rendering.py      # boxes, labels, banner (optional skeleton)
 └── tests/
+    ├── test_cli.py
     ├── test_features.py
     ├── test_monitor.py
     └── test_state_machine.py
@@ -285,7 +286,7 @@ fall-detection-alert/
 Run the tests with `pytest`, or without it (standard library only):
 
 ```bash
-python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('test_features','test_state_machine','test_monitor') for n, f in vars(importlib.import_module(m)).items() if n.startswith('test_')]"
+python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('test_cli','test_features','test_state_machine','test_monitor') for n, f in vars(importlib.import_module(m)).items() if n.startswith('test_')]"
 ```
 
 ## Limitations
