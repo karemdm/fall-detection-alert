@@ -52,7 +52,7 @@ class FallConfig:
     falling_timeout: float = 2.0
     recover_seconds: float = 2.0
     lost_seconds: float = 2.0
-    min_pose_keypoints: float = 6
+    min_pose_keypoints: int = 6
     stitch_distance: float = 1.0
 
 
