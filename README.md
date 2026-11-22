@@ -71,7 +71,7 @@ Windows (PowerShell):
 git clone https://github.com/karemdm/fall-detection-alert.git
 cd fall-detection-alert
 python -m venv .venv
-.venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1   # if blocked: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 pip install -r requirements.txt
 pip install -e .
 ```
