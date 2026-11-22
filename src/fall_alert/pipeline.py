@@ -47,6 +47,7 @@ def extract_persons(result) -> Dict[Hashable, Person]:
 
 
 def _fmt(value) -> str:
+    """Formats a trace-CSV number with 4 decimals; ``None`` becomes an empty cell."""
     return "" if value is None else f"{value:.4f}"
 
 

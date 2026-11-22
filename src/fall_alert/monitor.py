@@ -106,7 +106,15 @@ class FallMonitor:
         return out
 
     def _stitch(self, t, track_id, f, pos, observations) -> Optional[FallStateMachine]:
-        """Moves the nearest recently lost track (state machine and open alert) to ``track_id``."""
+        """Moves the nearest recently lost track (state machine and open alert) to ``track_id``.
+
+        Candidates are tracks not observed in this frame and last seen less than ``lost_seconds``
+        ago. The distance between box centers is divided by the larger of the old reference height
+        and the new box height (at least 1 px) and must not exceed ``stitch_distance``.
+
+        Returns:
+            The taken-over state machine, or ``None`` if no track qualifies.
+        """
         if self.cfg.stitch_distance <= 0:
             return None
         best, best_d = None, None
@@ -149,5 +157,6 @@ class FallMonitor:
         return [e for tid, e in self._open.items() if t - self._last_seen[tid] <= max_age]
 
     def _close(self, track_id: Hashable, t: float, reason: str) -> None:
+        """Ends the open alert of ``track_id`` at time ``t`` with ``reason``."""
         event = self._open.pop(track_id)
         event.end, event.end_reason = t, reason
