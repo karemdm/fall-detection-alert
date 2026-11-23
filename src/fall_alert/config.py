@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+import math
+from typing import List, Optional
 
 DEFAULT_MODEL = "weights/yolo11n-pose.pt"
 
@@ -55,6 +56,33 @@ class FallConfig:
     min_pose_keypoints: int = 6
     stitch_distance: float = 1.0
 
+    def validate(self) -> List[str]:
+        """Returns a message per out-of-range value (empty if the thresholds are usable).
+
+        ``NaN`` is rejected everywhere. Times must not be negative; the two velocity windows must
+        be positive (a zero window would never produce a velocity).
+        """
+        problems: List[str] = []
+
+        def check(name: str, ok: bool, rule: str) -> None:
+            if not ok:
+                problems.append(f"{name}={getattr(self, name)!r} must be {rule}")
+
+        def inside(v: float, lo: float, hi: float = math.inf) -> bool:
+            return lo <= v <= hi
+
+        check("min_kp_conf", inside(self.min_kp_conf, 0.0, 1.0), "between 0 and 1")
+        for name in ("falling_angle", "lying_angle", "upright_angle"):
+            check(name, inside(getattr(self, name), 0.0, 180.0), "between 0 and 180 degrees")
+        check("fall_velocity", inside(self.fall_velocity, 0.0), "0 or more")
+        for name in ("velocity_window", "height_window", "lying_aspect", "upright_aspect"):
+            check(name, getattr(self, name) > 0, "greater than 0")
+        for name in ("fallen_seconds", "lying_gap", "falling_timeout", "recover_seconds", "lost_seconds",
+                     "stitch_distance"):
+            check(name, inside(getattr(self, name), 0.0), "0 or more")
+        check("min_pose_keypoints", 0 <= self.min_pose_keypoints <= 17, "between 0 and 17")
+        return problems
+
 
 @dataclass
 class RunConfig:
@@ -85,3 +113,12 @@ class RunConfig:
     events_json: Optional[str] = None
     trace_csv: Optional[str] = None
     fall: FallConfig = field(default_factory=FallConfig)
+
+    def validate(self) -> List[str]:
+        """Returns a message per out-of-range option, including the fall thresholds."""
+        problems: List[str] = []
+        if not 0.0 <= self.conf <= 1.0:
+            problems.append(f"conf={self.conf!r} must be between 0 and 1")
+        if self.imgsz <= 0:
+            problems.append(f"imgsz={self.imgsz!r} must be greater than 0")
+        return problems + self.fall.validate()

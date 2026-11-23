@@ -97,11 +97,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     Returns:
         Process exit code.
     """
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    cfg = config_from_args(args)
+    problems = cfg.validate()
+    if problems:
+        parser.error("; ".join(problems))  # exits with status 2
     logging.basicConfig(level=args.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     from fall_alert.pipeline import run
 
-    return run(config_from_args(args))
+    return run(cfg)
 
 
 if __name__ == "__main__":
