@@ -72,3 +72,46 @@ def test_compute_features_low_confidence_gates_angle():
 def test_compute_features_short_keypoint_list():
     f = compute_features([], (0, 0, 10, 20), 0.5)
     assert f.torso_angle is None and f.hip_y is None
+
+
+def test_keypoint_exactly_at_the_gate_is_used():
+    assert visible_midpoint((0, 0, 0.5), (10, 0, 0.5), 0.5) == (5.0, 0.0)
+
+
+def test_upside_down_torso_angle_is_above_90():
+    kps = make_keypoints(((40, 100), (60, 100)), ((42, 40), (58, 40)))
+    f = compute_features(kps, (30, 30, 70, 110), 0.5)
+    assert f.torso_angle > 170.0
+
+
+def test_torso_angle_ignores_the_side_of_the_lean():
+    left = compute_features(make_keypoints(((40, 20), (40, 20)), ((80, 60), (80, 60))), (0, 0, 100, 100), 0.5)
+    right = compute_features(make_keypoints(((80, 20), (80, 20)), ((40, 60), (40, 60))), (0, 0, 100, 100), 0.5)
+    assert math.isclose(left.torso_angle, right.torso_angle) and math.isclose(left.torso_angle, 45.0)
+
+
+def test_single_visible_shoulder_and_hip_are_enough_for_an_angle():
+    kps = [(0.0, 0.0, 0.0)] * 17
+    kps[LEFT_SHOULDER] = (50.0, 20.0, 0.9)
+    kps[RIGHT_HIP] = (50.0, 60.0, 0.9)
+    f = compute_features(kps, (30, 0, 70, 120), 0.5)
+    assert math.isclose(f.torso_angle, 0.0, abs_tol=1e-9) and f.hip_y == 60.0
+
+
+def test_only_hips_visible_gives_hip_height_but_no_angle():
+    kps = [(0.0, 0.0, 0.0)] * 17
+    kps[LEFT_HIP] = (40.0, 70.0, 0.9)
+    f = compute_features(kps, (30, 0, 70, 120), 0.5)
+    assert f.torso_angle is None and f.hip_y == 70.0 and f.visible_keypoints == 1
+
+
+def test_visible_keypoint_count_uses_the_gate():
+    kps = [(0.0, 0.0, 0.9)] * 10 + [(0.0, 0.0, 0.49)] * 7
+    assert compute_features(kps, (0, 0, 10, 10), 0.5).visible_keypoints == 10
+
+
+def test_inverted_or_empty_boxes_do_not_crash():
+    assert aspect_ratio((10, 10, 0, 0)) == math.inf  # negative size is clamped to zero height
+    f = compute_features([], (10, 10, 0, 0), 0.5)
+    assert f.box_height == 0.0 and f.aspect_ratio == math.inf
+    assert aspect_ratio((5, 0, 5, 10)) == 0.0
