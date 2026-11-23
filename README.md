@@ -86,7 +86,8 @@ The pose models run on CPU. For a GPU, install the PyTorch build matching your C
 [`results/fall_mix_alert.mp4`](results/fall_mix_alert.mp4) (55.2 s, H.264 720p, no audio) is the annotated output on
 [`samples/fall_mix_input.mp4`](samples/README.md#fall-mix-fall_mix_inputmp4): eight GMDCSA24 falls of three subjects
 (day and night, side, forward and backward falls) followed by the Pexels snow fall, cut to ~2 s before each
-labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s.
+labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s. **Alert delay** = `ALERT` time minus the labelled fall onset of
+the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-1.9 s).
 
 | Run | Hits | Misses | False alerts | Alert delay after labelled fall start |
 |---|---|---|---|---|

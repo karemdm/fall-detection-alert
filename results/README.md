@@ -41,7 +41,8 @@ current `--conf 0.30`. The published video and events are the last run (9/9 hits
 
 Rule used: **hit** if an `ALERT` starts inside `[labelled fall start, labelled fall end + 2 s]` of the segment
 (clipped to the segment end), **miss** otherwise; a **false alert** is an `ALERT` starting outside every such
-window.
+window. The **alert delay** (the "+x s" values) is the `ALERT` time minus the labelled fall onset of the segment, not minus
+the detector's `fall_start` in the events JSON (which is later; `start - fall_start` there is 1.0-1.9 s).
 
 Columns "(1280)" are the published run (`--imgsz 1280`, `--conf 0.30`); "(640)" is the earlier run at `--conf 0.35`.
 `FALLING` (1280) is the first `FALLING` of the segment in the trace; the `fall_start` in the events JSON can be later
