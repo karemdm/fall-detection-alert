@@ -9,7 +9,7 @@ video and, optionally, a JSON list of alert events.
 
 ![demo](docs/assets/demo.gif)
 
-*Demo: screen recording of `fall-alert` running on two GMDCSA24 clips, with the live preview, the log and the events
+*Demo: screen recording of `fall-alert` running on a GMDCSA24 clip (`gmdcsa24-s1-fall-05.mp4`), with the live preview, the log and the events
 JSON (model loading and processing sped up). Footage: GMDCSA24 (MIT); see [samples/README.md](samples/README.md).
 Annotated results on every clip: [Results](#results).*
 
@@ -110,7 +110,8 @@ H.264 720p, no audio):
 | [`results/gmdcsa24-s1-fall-11_alert.mp4`](results/gmdcsa24-s1-fall-11_alert.mp4) | Standing facing the camera, then a backward fall ending on the side. |
 | [`results/snow-pexels-20595440_alert.mp4`](results/snow-pexels-20595440_alert.mp4) | Outdoor: man kicks a tree, falls backward and lies in deep snow (clip ends ~1 s later). |
 
-Measured with the default thresholds (own measurement on 5 clips, not a validation; snow and UniData fall times are
+Measured with the default fall thresholds (the three single clips were run with `--conf 0.35`, see
+[results/README.md](results/README.md); own measurement on 5 clips, not a validation; snow and UniData fall times are
 a visual estimate, GMDCSA24 times are dataset labels). The UniData clips are CC BY-NC-ND, so only their numbers
 are reported (no annotated video):
 
