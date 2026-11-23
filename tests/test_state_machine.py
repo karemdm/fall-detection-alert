@@ -151,3 +151,105 @@ def test_pose_gate_can_be_disabled():
     m = FallStateMachine(FallConfig(min_pose_keypoints=0))
     weak_lying = PoseFeatures(torso_angle=88.0, aspect_ratio=2.5, hip_y=650.0, box_height=180.0, visible_keypoints=0)
     assert ALERT in feed(m, 0.0, 3.0, weak_lying)
+
+
+def feed_at(machine, start, end, features, fps):
+    """Like ``feed`` with a chosen frame rate; returns ``(time, state)`` pairs."""
+    out = []
+    n = int(round((end - start) * fps))
+    for i in range(n):
+        t = start + i / fps
+        out.append((t, machine.update(t, features)))
+    return out
+
+
+def test_velocity_is_none_for_zero_or_tiny_time_span():
+    cfg = FallConfig(velocity_window=0.0)
+    h = MotionHistory(cfg)
+    h.update(1.0, PoseFeatures(0.0, 0.3, 100.0, 400.0))
+    h.update(1.0, PoseFeatures(0.0, 0.3, 140.0, 400.0))  # duplicate timestamp: no ZeroDivisionError
+    assert h.velocity() is None
+
+
+def test_velocity_needs_enough_frames_per_window():
+    """Frames further apart than velocity_window leave one sample in the window: no velocity."""
+    h = MotionHistory(FallConfig(velocity_window=0.3))
+    for i in range(5):
+        h.update(i * 0.4, PoseFeatures(0.0, 0.3, 100.0 + 50.0 * i, 400.0))
+        assert h.velocity() is None
+
+
+def test_velocity_ignores_frames_without_hips():
+    h = MotionHistory(FallConfig(velocity_window=0.3))
+    h.update(0.0, PoseFeatures(0.0, 0.3, 100.0, 400.0))
+    h.update(0.1, PoseFeatures(None, 0.3, None, 400.0))
+    h.update(0.2, PoseFeatures(0.0, 0.3, 140.0, 400.0))
+    assert math.isclose(h.velocity(), (40.0 / 0.2) / 400.0)
+
+
+def test_fast_drop_does_not_start_falling_before_the_track_is_armed():
+    m = FallStateMachine(FallConfig(fall_velocity=0.8))
+    for i in range(12):
+        f = PoseFeatures(3.0, 0.35, 300.0 + 750.0 * i / FPS, 500.0, visible_keypoints=2)
+        assert m.update(i / FPS, f) == UPRIGHT
+    assert m.velocity is not None and m.velocity > 0.8 and not m.armed
+
+
+def test_alert_stays_while_posture_is_neither_lying_nor_upright():
+    m = FallStateMachine(FallConfig(recover_seconds=2.0))
+    feed(m, 0.0, 1.0, STANDING)
+    feed(m, 1.0, 3.0, LYING)
+    assert m.state == ALERT
+    assert set(feed(m, 3.0, 9.0, BENT)) == {ALERT}  # sitting up for a long time is not recovery
+
+
+def test_interrupted_upright_does_not_recover():
+    m = FallStateMachine(FallConfig(recover_seconds=2.0))
+    feed(m, 0.0, 1.0, STANDING)
+    feed(m, 1.0, 3.0, LYING)
+    feed(m, 3.0, 4.5, STANDING)
+    feed(m, 4.5, 4.6, BENT)  # the upright timer restarts
+    assert set(feed(m, 4.6, 6.0, STANDING)) == {ALERT}
+    assert feed(m, 6.0, 7.0, STANDING)[-1] == UPRIGHT
+
+
+def test_fall_start_moves_when_fallen_drops_back_to_falling():
+    m = FallStateMachine(FallConfig(lying_gap=0.3))
+    feed(m, 0.0, 1.0, STANDING)
+    feed(m, 1.0, 1.5, LYING)
+    assert m.fall_start == 1.0
+    feed(m, 1.5, 2.0, BENT)
+    assert m.state == FALLING and m.fall_start > 1.5
+    feed(m, 2.0, 4.0, LYING)
+    assert m.state == ALERT and m.fall_start > 1.5
+
+
+def test_upside_down_torso_counts_as_lying():
+    upside_down = PoseFeatures(torso_angle=170.0, aspect_ratio=0.5, hip_y=100.0, box_height=300.0)
+    assert is_lying(upside_down, FallConfig()) and not is_upright(upside_down, FallConfig())
+
+
+def test_zero_height_box_is_lying_by_aspect_but_cannot_arm_an_empty_track():
+    degenerate = PoseFeatures(torso_angle=None, aspect_ratio=math.inf, hip_y=None, box_height=0.0, visible_keypoints=0)
+    assert is_lying(degenerate, FallConfig())
+    assert set(feed(FallStateMachine(FallConfig()), 0.0, 3.0, degenerate)) == {UPRIGHT}
+
+
+def test_alert_time_does_not_depend_on_frame_rate():
+    """The same fall reaches ALERT at the same video time at 5, 10, 30 and 60 FPS (one frame tolerance)."""
+    alert_times = {}
+    for fps in (5, 10, 30, 60):
+        m = FallStateMachine(FallConfig(fallen_seconds=1.0))
+        feed_at(m, 0.0, 1.0, STANDING, fps)
+        seq = feed_at(m, 1.0, 4.0, LYING, fps)
+        alert_times[fps] = next(t for t, s in seq if s == ALERT)
+    for fps, t in alert_times.items():
+        assert 2.0 <= t <= 2.0 + 1.0 / fps + 1e-9, (fps, t)
+
+
+def test_sparse_frames_keep_the_lying_timer_running():
+    """Observed lying frames 0.5 s apart (detector misses) still confirm after fallen_seconds."""
+    m = FallStateMachine(FallConfig(fallen_seconds=1.0, lying_gap=0.3))
+    feed(m, 0.0, 1.0, STANDING)
+    seq = feed_at(m, 1.0, 3.0, LYING, 2)
+    assert [s for _, s in seq][:2] == [FALLEN, FALLEN] and seq[2][1] == ALERT
