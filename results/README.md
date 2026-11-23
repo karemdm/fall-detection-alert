@@ -11,6 +11,10 @@ Annotated videos produced by this project, re-encoded to H.264 720p without audi
   knees and lying on the floor.
 - `gmdcsa24-s1-fall-11_alert.mp4` + `gmdcsa24-s1-fall-11_events.json`: standing facing the camera, then a backward
   fall ending on the side.
+- `gmdcsa24-s1-fall-05_trace.csv`: per-frame, per-track features and states of the fall-05 run (`--trace-csv`, same run
+  as the events file; columns in the main README).
+- `ice_3min_alert_raw.mp4`: raw annotated output on the ice compilation; source and licensing: see
+  [Ice compilation](../samples/README.md#ice-compilation-ice_3minmp4).
 - `snow-pexels-20595440_alert.mp4` + `snow-pexels-20595440_events.json`: outdoor, man kicks a tree, falls backward
   and lies in deep snow; the clip ends ~1 s after he lands (**no alert**, see below).
 - `fall_mix_alert.mp4` + `fall_mix_events.json`: the 55.2 s fall mix (eight GMDCSA24 falls of three subjects plus
@@ -20,7 +24,7 @@ Reproduce (from the repo root):
 
 ```bash
 fall-alert -i samples/fall_mix_input.mp4 -o outputs/fall_mix_alert.mp4 --events-json results/fall_mix_events.json --trace-csv outputs/fall_mix_trace.csv --imgsz 1280 --no-display
-fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --conf 0.35 --no-display
+fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --trace-csv results/gmdcsa24-s1-fall-05_trace.csv --conf 0.35 --no-display
 fall-alert -i samples/gmdcsa24-s1-fall-11.mp4 -o outputs/fall-11.mp4 --events-json results/gmdcsa24-s1-fall-11_events.json --conf 0.35 --no-display
 fall-alert -i samples/snow-pexels-20595440.mp4 -o outputs/snow-20595440.mp4 --events-json results/snow-pexels-20595440_events.json --conf 0.35 --no-display
 ```
@@ -107,7 +111,7 @@ Observations (from the `--trace-csv` output and frames of the annotated videos):
   and both alerts fired inside the labelled fall window. The alerts stayed on until the end of each clip, where the
   person is still on the floor (`end_reason: end_of_video`).
 - `FALLING` was triggered by the torso angle crossing 45° in both clips. The hip velocity peaked at 0.70 H/s
-  (fall-05) and 0.60 H/s (fall-11), below the 0.8 H/s default, so the velocity cue did not contribute.
+  (fall-05, confirmed in the trace CSV: 0.6967 at 2.24 s) and 0.60 H/s (fall-11), below the 0.8 H/s default, so the velocity cue did not contribute.
 - `FALLING` lasted only 1–4 frames before the lying rule was met, so the orange box is barely visible.
 - fall-11: the torso angle first rose to ~43° at 1.57 s, then dropped to ~25° while the body fell backward toward
   the camera (foreshortened torso); it crossed 45° at 2.03 s. Most of the delay between the label start (1.0 s)
