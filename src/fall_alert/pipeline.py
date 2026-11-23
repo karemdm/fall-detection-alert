@@ -5,7 +5,6 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import math
 import os
 import sys
 import time
@@ -17,6 +16,7 @@ from fall_alert.config import RunConfig
 from fall_alert.features import Box, Keypoint, compute_features
 from fall_alert.monitor import FallMonitor
 from fall_alert.rendering import render
+from fall_alert.timing import frame_time, valid_fps
 
 logger = logging.getLogger(__name__)
 
@@ -60,27 +60,25 @@ def run(cfg: RunConfig) -> int:
     Returns:
         Process exit code (``0`` on success).
     """
-    from ultralytics import YOLO
-
     cap = cv2.VideoCapture(cfg.input_path)
     if not cap.isOpened():
         logger.error("Cannot open input video: %s", cfg.input_path)
         return 1
-    width, height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    if not fps or math.isnan(fps) or fps <= 0:
-        fps = 30.0
-    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    logger.info("Input: %dx%d @ %.2f FPS, %d frames", width, height, fps, total)
-
-    for path in (cfg.output_path, cfg.events_json, cfg.trace_csv):
-        if path and os.path.dirname(path):
-            os.makedirs(os.path.dirname(path), exist_ok=True)
     writer = None
     trace_file = None
-    monitor = FallMonitor(cfg.fall)
-    frame_idx, start = 0, time.time()
     try:
+        from ultralytics import YOLO
+
+        width, height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = valid_fps(cap.get(cv2.CAP_PROP_FPS))
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        logger.info("Input: %dx%d @ %.2f FPS, %d frames", width, height, fps, total)
+
+        for path in (cfg.output_path, cfg.events_json, cfg.trace_csv):
+            if path and os.path.dirname(path):
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+        monitor = FallMonitor(cfg.fall)
+        frame_idx, start, t = 0, time.time(), None
         logger.info("Loading pose model %s", cfg.model)
         model = YOLO(cfg.model)
         trace_file = open(cfg.trace_csv, "w", newline="", encoding="utf-8") if cfg.trace_csv else None
@@ -101,8 +99,7 @@ def run(cfg: RunConfig) -> int:
                 if not writer.isOpened():
                     logger.error("Cannot open output video for writing: %s", cfg.output_path)
                     return 1
-            pos_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
-            t = pos_ms / 1000.0 if pos_ms and pos_ms > 0 else frame_idx / fps
+            t = frame_time(cap.get(cv2.CAP_PROP_POS_MSEC), frame_idx, fps, t)
             frame_idx += 1
             result = model.track(
                 frame, persist=True, conf=cfg.conf, imgsz=cfg.imgsz, tracker=cfg.tracker, classes=[0], verbose=False
