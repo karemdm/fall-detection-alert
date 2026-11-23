@@ -81,14 +81,14 @@ Observations (from the trace and frames of the annotated videos):
   segments 6 and 8 at 640) returned to `UPRIGHT` without an alert. The hanging clothes on the left of the Subject 2
   / Subject 3 room were sometimes detected as an extra `UPRIGHT` person; these tracks never left `UPRIGHT`.
 - **Cuts between segments.** The previous person's track is only dropped after `lost_seconds` (2 s) without a
-  detection, so the red banner of the last alert stays on for up to ~2 s into the next segment (visible in the demo
-  GIF), and at 31.20–31.33 s the alerting track #44 of segment 5 was briefly matched to the new person of
+  detection, so the red banner of the last alert stays on for up to ~2 s into the next segment (visible in
+  `fall_mix_alert.mp4`), and at 31.20–31.33 s the alerting track #44 of segment 5 was briefly matched to the new person of
   segment 6. These are artefacts of the hard cuts, not new alert events.
 - Delays from the labelled fall start to `ALERT` were 1.5–2.6 s on the clean hits; they include the time to reach
   the floor and the 1.0 s confirmation by design.
 
-The demo GIF (`docs/assets/demo.gif`) is cut from this video: mix time 21.0–29.8 s (segments 4 and 5, 8 fps,
-720 px wide).
+The demo GIF (`docs/assets/demo.gif`) is not cut from this video: it is a screen recording of `fall-alert` running
+on `gmdcsa24-s1-fall-05.mp4` (see the main README).
 
 ## What was measured
 
@@ -117,8 +117,7 @@ Observations (from the `--trace-csv` output and frames of the annotated videos):
 - No threshold was changed after looking at these clips; the values in `FallConfig` are the initial defaults.
 
 An earlier demo GIF was made from a 12 s concatenation of these two clips; the cut between them produced a new
-track id (#3) and a second alert (9.00 s, i.e. 3.13 s into the second clip). The current GIF comes from the
-[fall mix](#fall-mix).
+track id (#3) and a second alert (9.00 s, i.e. 3.13 s into the second clip).
 
 ## Snow clips (outdoor, Pexels)
 
