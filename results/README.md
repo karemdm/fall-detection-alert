@@ -11,6 +11,10 @@ Annotated videos produced by this project, re-encoded to H.264 720p without audi
   knees and lying on the floor.
 - `gmdcsa24-s1-fall-11_alert.mp4` + `gmdcsa24-s1-fall-11_events.json`: standing facing the camera, then a backward
   fall ending on the side.
+- `gmdcsa24-s1-fall-05_trace.csv`: per-frame, per-track features and states of the fall-05 run (`--trace-csv`, same run
+  as the events file; columns in the main README).
+- `ice_3min_alert_raw.mp4`: raw annotated output on the ice compilation; source and licensing: see
+  [Ice compilation](../samples/README.md#ice-compilation-ice_3minmp4).
 - `snow-pexels-20595440_alert.mp4` + `snow-pexels-20595440_events.json`: outdoor, man kicks a tree, falls backward
   and lies in deep snow; the clip ends ~1 s after he lands (**no alert**, see below).
 - `fall_mix_alert.mp4` + `fall_mix_events.json`: the 55.2 s fall mix (eight GMDCSA24 falls of three subjects plus
@@ -20,7 +24,7 @@ Reproduce (from the repo root):
 
 ```bash
 fall-alert -i samples/fall_mix_input.mp4 -o outputs/fall_mix_alert.mp4 --events-json results/fall_mix_events.json --trace-csv outputs/fall_mix_trace.csv --imgsz 1280 --no-display
-fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --conf 0.35 --no-display
+fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --trace-csv results/gmdcsa24-s1-fall-05_trace.csv --conf 0.35 --no-display
 fall-alert -i samples/gmdcsa24-s1-fall-11.mp4 -o outputs/fall-11.mp4 --events-json results/gmdcsa24-s1-fall-11_events.json --conf 0.35 --no-display
 fall-alert -i samples/snow-pexels-20595440.mp4 -o outputs/snow-20595440.mp4 --events-json results/snow-pexels-20595440_events.json --conf 0.35 --no-display
 ```
@@ -37,7 +41,8 @@ current `--conf 0.30`. The published video and events are the last run (9/9 hits
 
 Rule used: **hit** if an `ALERT` starts inside `[labelled fall start, labelled fall end + 2 s]` of the segment
 (clipped to the segment end), **miss** otherwise; a **false alert** is an `ALERT` starting outside every such
-window.
+window. The **alert delay** (the "+x s" values) is the `ALERT` time minus the labelled fall onset of the segment, not minus
+the detector's `fall_start` in the events JSON (which is later; `start - fall_start` there is 1.0-1.9 s).
 
 Columns "(1280)" are the published run (`--imgsz 1280`, `--conf 0.30`); "(640)" is the earlier run at `--conf 0.35`.
 `FALLING` (1280) is the first `FALLING` of the segment in the trace; the `fall_start` in the events JSON can be later
@@ -81,14 +86,14 @@ Observations (from the trace and frames of the annotated videos):
   segments 6 and 8 at 640) returned to `UPRIGHT` without an alert. The hanging clothes on the left of the Subject 2
   / Subject 3 room were sometimes detected as an extra `UPRIGHT` person; these tracks never left `UPRIGHT`.
 - **Cuts between segments.** The previous person's track is only dropped after `lost_seconds` (2 s) without a
-  detection, so the red banner of the last alert stays on for up to ~2 s into the next segment (visible in the demo
-  GIF), and at 31.20–31.33 s the alerting track #44 of segment 5 was briefly matched to the new person of
+  detection, so the red banner of the last alert stays on for up to ~2 s into the next segment (visible in
+  `fall_mix_alert.mp4`), and at 31.20–31.33 s the alerting track #44 of segment 5 was briefly matched to the new person of
   segment 6. These are artefacts of the hard cuts, not new alert events.
 - Delays from the labelled fall start to `ALERT` were 1.5–2.6 s on the clean hits; they include the time to reach
   the floor and the 1.0 s confirmation by design.
 
-The demo GIF (`docs/assets/demo.gif`) is cut from this video: mix time 21.0–29.8 s (segments 4 and 5, 8 fps,
-720 px wide).
+The demo GIF (`docs/assets/demo.gif`) is not cut from this video: it is a screen recording of `fall-alert` running
+on `gmdcsa24-s1-fall-05.mp4` (see the main README).
 
 ## What was measured
 
@@ -107,7 +112,7 @@ Observations (from the `--trace-csv` output and frames of the annotated videos):
   and both alerts fired inside the labelled fall window. The alerts stayed on until the end of each clip, where the
   person is still on the floor (`end_reason: end_of_video`).
 - `FALLING` was triggered by the torso angle crossing 45° in both clips. The hip velocity peaked at 0.70 H/s
-  (fall-05) and 0.60 H/s (fall-11), below the 0.8 H/s default, so the velocity cue did not contribute.
+  (fall-05, confirmed in the trace CSV: 0.6967 at 2.24 s) and 0.60 H/s (fall-11), below the 0.8 H/s default, so the velocity cue did not contribute.
 - `FALLING` lasted only 1–4 frames before the lying rule was met, so the orange box is barely visible.
 - fall-11: the torso angle first rose to ~43° at 1.57 s, then dropped to ~25° while the body fell backward toward
   the camera (foreshortened torso); it crossed 45° at 2.03 s. Most of the delay between the label start (1.0 s)
@@ -117,8 +122,7 @@ Observations (from the `--trace-csv` output and frames of the annotated videos):
 - No threshold was changed after looking at these clips; the values in `FallConfig` are the initial defaults.
 
 An earlier demo GIF was made from a 12 s concatenation of these two clips; the cut between them produced a new
-track id (#3) and a second alert (9.00 s, i.e. 3.13 s into the second clip). The current GIF comes from the
-[fall mix](#fall-mix).
+track id (#3) and a second alert (9.00 s, i.e. 3.13 s into the second clip).
 
 ## Snow clips (outdoor, Pexels)
 

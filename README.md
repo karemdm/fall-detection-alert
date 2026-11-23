@@ -9,7 +9,7 @@ video and, optionally, a JSON list of alert events.
 
 ![demo](docs/assets/demo.gif)
 
-*Demo: screen recording of `fall-alert` running on two GMDCSA24 clips, with the live preview, the log and the events
+*Demo: screen recording of `fall-alert` running on a GMDCSA24 clip (`gmdcsa24-s1-fall-05.mp4`), with the live preview, the log and the events
 JSON (model loading and processing sped up). Footage: GMDCSA24 (MIT); see [samples/README.md](samples/README.md).
 Annotated results on every clip: [Results](#results).*
 
@@ -86,7 +86,8 @@ The pose models run on CPU. For a GPU, install the PyTorch build matching your C
 [`results/fall_mix_alert.mp4`](results/fall_mix_alert.mp4) (55.2 s, H.264 720p, no audio) is the annotated output on
 [`samples/fall_mix_input.mp4`](samples/README.md#fall-mix-fall_mix_inputmp4): eight GMDCSA24 falls of three subjects
 (day and night, side, forward and backward falls) followed by the Pexels snow fall, cut to ~2 s before each
-labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s.
+labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s. **Alert delay** = `ALERT` time minus the labelled fall onset of
+the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-1.9 s).
 
 | Run | Hits | Misses | False alerts | Alert delay after labelled fall start |
 |---|---|---|---|---|
@@ -110,7 +111,8 @@ H.264 720p, no audio):
 | [`results/gmdcsa24-s1-fall-11_alert.mp4`](results/gmdcsa24-s1-fall-11_alert.mp4) | Standing facing the camera, then a backward fall ending on the side. |
 | [`results/snow-pexels-20595440_alert.mp4`](results/snow-pexels-20595440_alert.mp4) | Outdoor: man kicks a tree, falls backward and lies in deep snow (clip ends ~1 s later). |
 
-Measured with the default thresholds (own measurement on 5 clips, not a validation; snow and UniData fall times are
+Measured with the default fall thresholds (the three single clips were run with `--conf 0.35`, see
+[results/README.md](results/README.md); own measurement on 5 clips, not a validation; snow and UniData fall times are
 a visual estimate, GMDCSA24 times are dataset labels). The UniData clips are CC BY-NC-ND, so only their numbers
 are reported (no annotated video):
 
