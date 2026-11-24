@@ -14,13 +14,11 @@ flowchart TD
     B --> F["Box aspect ratio w / h<br/>reference height H = max box height over 2 s"]
     E --> G["Hip velocity v = Δy_hip / Δt / H<br/>over 0.3 s"]
     F --> G
-    D --> H["Per-track state machine"]
-    F --> H
-    G --> H
-    H --> I["UPRIGHT"]
-    H --> J["FALLING"]
-    H --> K["FALLEN"]
-    H --> L["ALERT → event log (JSON)"]
+    D --> R["Id-switch repair<br/>(which track's state machine gets the frame)"]
+    F --> R
+    G --> R
+    R --> H["Per-track state machine<br/>UPRIGHT → FALLING → FALLEN → ALERT"]
+    H --> L["Alert events (JSON), annotated video, trace CSV"]
 ```
 
 ## 1. Detection, keypoints and tracking
@@ -63,7 +61,10 @@ passes the gate, `θ` is undefined and only the aspect ratio is used.
 v = (y_hip(t) − y_hip(t − Δt)) / Δt / H        [body heights per second]
 ```
 
-It is computed only when the hip samples span at least half the window.
+It uses the oldest and the newest hip sample inside the window (no smoothing) and is computed only when they span
+at least half the window; frames where the hips are gated out are skipped. With less than about 3.4 frames per second
+the window holds a single sample and `v` is never available. Time comes from the frame timestamps, not from a frame
+count, so a variable frame rate does not change the units.
 
 ## 3. Posture classes
 
@@ -78,13 +79,19 @@ A pose can be neither (e.g. bending over, sitting).
 
 ```mermaid
 flowchart TD
-    U["UPRIGHT"] -- "v ≥ 0.8 H/s  or  θ ≥ 45°  or  lying" --> F["FALLING"]
+    U["UPRIGHT"] -- "armed and (v ≥ 0.8 H/s or θ ≥ 45° or lying)" --> F["FALLING"]
     F -- "lying" --> D["FALLEN"]
     F -- "no lying within 2.0 s" --> U
-    D -- "lying held 1.0 s<br/>(gaps < 0.3 s tolerated)" --> A["ALERT"]
-    D -- "not lying for > 0.3 s" --> F
+    D -- "lying held 1.0 s<br/>(gaps up to 0.3 s tolerated)" --> A["ALERT"]
+    D -- "not lying for more than 0.3 s" --> F
     A -- "upright held 2.0 s" --> U
+    U -. "track not seen for more than 2.0 s" .-> X["track dropped<br/>(open alert closed: lost)"]
+    F -. "same" .-> X
+    D -. "same" .-> X
+    A -. "same" .-> X
 ```
+
+`ALERT` is left only through the upright timer: a person who sits up (neither lying nor upright) keeps the alert open.
 
 - `fall_start` is the time of the latest entry into `FALLING` and is reported with
   the alert. It is set on `UPRIGHT → FALLING` and set again on `FALLEN → FALLING`.
@@ -100,6 +107,8 @@ flowchart TD
   goes straight to `FALLEN` (via `FALLING`).
 - The upright timer for recovery counts consecutive upright frames; any
   non-upright frame restarts it.
+- All timers run on video time, also across detection gaps shorter than `lost_seconds`: a person who is
+  lying when the track disappears and reappears lying 1.5 s later goes to `ALERT` on the first frame after the gap.
 - A track that is not detected for more than `lost_seconds` (2 s) is dropped; an
   open alert is closed with the time it was last seen (`end_reason: "lost"`). A
   track that reappears later with the same id starts again in `UPRIGHT`. The alert
@@ -108,7 +117,8 @@ flowchart TD
 - At the end of the video, open alerts are closed with `end_reason: "end_of_video"`.
 - Timestamps are video time from `CAP_PROP_POS_MSEC` (falls back to
   `frame_index / fps`, with 30 FPS if the container reports none), so the logic
-  does not depend on processing speed.
+  does not depend on processing speed. Time never goes backwards: a timestamp earlier
+  than the previous frame's is held at the previous value.
 
 ## 5. Parameter guide and tuning tips
 
@@ -142,5 +152,9 @@ Tips:
 - The aspect-ratio rule depends on the camera view: a person lying along the
   camera's optical axis can have a narrow box and a foreshortened torso, so the
   posture may never count as lying. High-mounted cameras help.
+- A person cut by the image border has a clipped box (different aspect ratio and reference height) and
+  often no hip or shoulder keypoints; the rules then rely on the aspect ratio alone.
+- If only one shoulder and one hip on opposite sides pass the gate, the angle includes the body width
+  (about 35° for an upright person): such a frame is neither upright nor lying by the angle.
 - For lying-down on purpose (bed, sofa, exercise), the rules alone cannot tell the
   difference; restrict the zone or add a second-stage classifier.

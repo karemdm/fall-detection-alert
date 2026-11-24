@@ -31,24 +31,27 @@ Annotated results on every clip: [Results](#results).*
 
 ```mermaid
 flowchart TD
-    A["Video frame"] --> B["YOLO11n-pose + ByteTrack<br/>box + 17 keypoints per track"]
-    B --> S["Id-switch repair<br/>new id next to a lost track continues it"]
-    S --> C["Gate shoulders / hips<br/>keypoint conf ≥ 0.5"]
+    A["Video frame (time t)"] --> B["YOLO11n-pose + ByteTrack<br/>box + 17 keypoints per track id"]
+    B --> C["Gate shoulders / hips<br/>keypoint conf ≥ 0.5"]
+    B --> F["Box aspect ratio w / h"]
     C --> D["Torso angle θ from vertical"]
     C --> E["Hip velocity v<br/>body heights / s"]
-    B --> F["Box aspect ratio w / h"]
-    D --> G{"UPRIGHT, armed by one body pose (≥ 6 keypoints):<br/>v ≥ 0.8 or θ ≥ 45° or lying?"}
-    E --> G
-    F --> G
+    D --> S["Id-switch repair<br/>a new id next to a recently lost track<br/>continues that track's state and alert"]
+    E --> S
+    F --> S
+    S --> G{"UPRIGHT and armed<br/>(≥ 6 confident keypoints seen once):<br/>v ≥ 0.8 or θ ≥ 45° or lying?"}
     G -- yes --> H["FALLING"]
     H --> I{"Lying?<br/>θ ≥ 60° or w/h ≥ 1.2"}
     I -- "no, for 2 s" --> U["back to UPRIGHT"]
     I -- yes --> J["FALLEN"]
-    J --> K{"Lying held 1.0 s?"}
+    J --> K{"Lying held 1.0 s?<br/>(gaps up to 0.3 s tolerated)"}
+    K -- "not lying for more than 0.3 s" --> H
     K -- yes --> L["ALERT + event"]
     L --> M{"Upright held 2 s?"}
     M -- yes --> U
 ```
+
+A track not detected for more than 2 s is dropped; an open alert is then closed (`end_reason: lost`).
 
 Formulas, the full state diagram and tuning tips: [docs/how-it-works.md](docs/how-it-works.md).
 
@@ -145,7 +148,7 @@ processing are sped up in the recording.
 fall-alert -i local_test/ice_cut.mp4 -o local_test/ice_cut_alert.mp4 --model yolo26s-pose.pt --conf 0.20 --events-json local_test/ice_cut.json
 ```
 
-All three falls raise an alert (1.0–1.1 s after `FALLING`, as configured). Configurations compared on these clips
+All three falls raise an alert (1.0–1.2 s after `FALLING`, as configured). Configurations compared on these clips
 (alerts out of 3 on the cut; out of the 5–6 visible slips on the 55 s excerpt 1:05–2:00 of the compilation):
 
 | Pose model | `--imgsz` | `--conf` | Cut (3 falls) | 55 s excerpt |
@@ -180,7 +183,8 @@ fall-alert -i input.mp4 -o outputs/out.mp4 --model yolo11s-pose.pt --tracker bot
 PYTHONPATH=src python -m fall_alert --help
 ```
 
-Press `Q` in the preview window to stop early.
+Press `Q` in the preview window to stop early. Exit codes: `0` success, `1` the input cannot be opened, no frame
+can be read or the output cannot be written, `2` invalid command-line values (for example a negative time or `--conf 2`).
 
 ### Testing on your own footage
 
@@ -276,19 +280,24 @@ fall-detection-alert/
 │   ├── features.py       # torso angle, aspect ratio, keypoint gating (stdlib)
 │   ├── state_machine.py  # per-track UPRIGHT/FALLING/FALLEN/ALERT logic (stdlib)
 │   ├── monitor.py        # multi-track manager and alert events (stdlib)
+│   ├── timing.py         # frame time and fps fallbacks (stdlib)
 │   ├── pipeline.py       # video loop, tracking, export
 │   └── rendering.py      # boxes, labels, banner (optional skeleton)
 └── tests/
     ├── test_cli.py
     ├── test_features.py
     ├── test_monitor.py
-    └── test_state_machine.py
+    ├── test_pipeline.py   # needs opencv; fake results, no model
+    ├── test_rendering.py  # needs opencv and numpy
+    ├── test_state_machine.py
+    └── test_timing.py
 ```
 
-Run the tests with `pytest`, or without it (standard library only):
+Run the tests with `pytest` (`pip install pytest`; no model or video is needed). The logic tests also run without
+pytest (standard library only):
 
 ```bash
-python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('test_cli','test_features','test_state_machine','test_monitor') for n, f in vars(importlib.import_module(m)).items() if n.startswith('test_')]"
+python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('test_cli','test_features','test_state_machine','test_monitor','test_timing') for n, f in vars(importlib.import_module(m)).items() if n.startswith('test_')]"
 ```
 
 ## Limitations
@@ -309,8 +318,15 @@ python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('
 - The velocity cue never started `FALLING` on the sample clips: peaks 0.70 and 0.60 H/s (GMDCSA24); on the
   snow kick clip it exceeded 0.8 H/s only after `FALLING` had started. `FALLING` was started by the
   torso angle. See [docs/how-it-works.md](docs/how-it-works.md#5-parameter-guide-and-tuning-tips).
-- Timestamps come from the container (`CAP_PROP_POS_MSEC`); the output video is written at a constant FPS, so
+- Timestamps come from the container (`CAP_PROP_POS_MSEC`, held non-decreasing; `frame index / fps` if the container
+  gives none, 30 FPS if it reports no frame rate); the output video is written at a constant FPS, so
   variable-frame-rate inputs can show small timing differences between the banner and the player clock.
+- **Low frame rates.** The hip velocity needs two hip samples within `--velocity-window` (0.3 s), so below about 3.4 FPS
+  it is never available and only the angle and box rules can start `FALLING`.
+- **Person cut by the image border.** A box clipped by the frame edge changes the aspect ratio and the reference
+  height, and hidden hips/shoulders disable the angle; a partly visible person can look wider or shorter than they are.
+- With only one shoulder and one hip visible on opposite sides, the torso angle includes the body width (about
+  35° for an upright person), so such frames count neither as upright nor as lying by the angle.
 
 ## Models & credits
 
