@@ -73,15 +73,18 @@ class MotionHistory:
     def velocity(self) -> Optional[float]:
         """Downward hip velocity in reference heights per second (``None`` if unknown).
 
-        Needs samples spanning at least half of ``velocity_window``.
+        Uses the oldest and the newest hip sample inside ``velocity_window`` (no smoothing) and
+        needs them to span at least half of the window, so a video slower than about
+        ``1 / velocity_window`` frames per second never produces a velocity.
         """
         if len(self._hips) < 2:
             return None
         (t0, y0), (t1, y1) = self._hips[0], self._hips[-1]
         ref = self.reference_height()
-        if t1 - t0 < 0.5 * self.cfg.velocity_window or ref <= 0:
+        dt = t1 - t0
+        if dt <= 0 or dt < 0.5 * self.cfg.velocity_window or ref <= 0:
             return None
-        return (y1 - y0) / (t1 - t0) / ref
+        return (y1 - y0) / dt / ref
 
 
 class FallStateMachine:
