@@ -14,7 +14,7 @@ flowchart TD
     B --> F["Box aspect ratio w / h<br/>reference height H = max box height over 2 s"]
     E --> G["Hip velocity v = Δy_hip / Δt / H<br/>median pairwise slope over 0.3 s"]
     F --> G
-    D --> R["Id-switch repair<br/>(only for lost tracks that were not UPRIGHT)<br/>which track's state machine gets the frame"]
+    D --> R["Id-switch repair<br/>(only lost non-UPRIGHT tracks, only a not-upright newcomer)<br/>which track's state machine gets the frame"]
     F --> R
     G --> R
     R --> H["Per-track state machine<br/>UPRIGHT → FALLING → FALLEN → ALERT"]
@@ -115,9 +115,11 @@ flowchart TD
   restart. A track lost while `UPRIGHT` is never stitched, so a new person walking in
   near it starts a new state machine in `UPRIGHT` (unarmed until one frame with enough
   keypoints). The stitched track keeps the old machine as is (including `armed`), and
-  the open alert moves with it, still one event. If the newcomer is upright, the
-  inherited `ALERT` ends as `recovered` once it has been upright for `recover_seconds`;
-  if nothing stitches, the alert closes as `lost` at the last time the old track was seen.
+  the open alert moves with it, still one event. The newcomer must also not be clearly
+  upright at its first observation (torso angle above `upright_angle` or box aspect
+  above `upright_aspect`, or no angle and a wide box): an upright person next to a lost
+  `FALLEN` or `ALERT` track is someone else and is not stitched. When nothing stitches, the
+  old alert closes as `lost` at the last time the old track was seen.
   Results published before this rule was added were produced with the older, broader
   stitching and may differ.
 - A single frame can pass several transitions: a lying posture seen in `UPRIGHT`

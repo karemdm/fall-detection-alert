@@ -8,7 +8,7 @@ from typing import Dict, Hashable, List, Mapping, Optional, Tuple
 
 from fall_alert.config import FallConfig
 from fall_alert.features import PoseFeatures
-from fall_alert.state_machine import ALERT, UPRIGHT, FallStateMachine
+from fall_alert.state_machine import ALERT, UPRIGHT, FallStateMachine, is_upright
 
 
 @dataclass
@@ -115,15 +115,17 @@ class FallMonitor:
         divided by the larger of the old reference height and the new box height (at least 1 px)
         and must not exceed ``stitch_distance``.
 
-        The new track inherits the state of the old one regardless of its own posture (an upright
-        newcomer next to a lost ``ALERT`` track continues the alert until the upright timer ends
-        it as ``recovered``). Without a stitch, the old alert closes as ``lost`` after
-        ``lost_seconds`` and the new track starts unarmed in ``UPRIGHT``.
+        The new track must also not be clearly upright at its first observation (see
+        :func:`~fall_alert.state_machine.is_upright`: torso angle above ``upright_angle`` or box
+        aspect above ``upright_aspect``, or no angle and a wide box). A person who is upright next
+        to a lost ``FALLEN``/``ALERT`` track is someone else, not the fallen person. Without a
+        stitch the old alert closes as ``lost`` after ``lost_seconds`` and the new track starts
+        unarmed in ``UPRIGHT``.
 
         Returns:
             The taken-over state machine, or ``None`` if no track qualifies.
         """
-        if self.cfg.stitch_distance <= 0:
+        if self.cfg.stitch_distance <= 0 or is_upright(f, self.cfg):
             return None
         best, best_d = None, None
         for old_id, seen in self._last_seen.items():

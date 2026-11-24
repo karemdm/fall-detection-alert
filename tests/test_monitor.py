@@ -175,15 +175,34 @@ def test_lost_alert_track_is_stitched_to_a_new_track():
     assert out[2].state == ALERT and len(m.events) == 1 and m.events[0].end is None
 
 
-def test_upright_newcomer_next_to_lost_alert_continues_it_until_recovered():
-    # documented behavior: the stitch rules only look at the lost track, so an upright newcomer
-    # inherits the ALERT state, which then ends as "recovered" after recover_seconds upright
-    m = FallMonitor(FallConfig())
+def test_upright_newcomer_next_to_lost_alert_is_not_stitched_and_alert_closes_as_lost():
+    m = FallMonitor(FallConfig(lost_seconds=1.0))
     fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.5)
     out = run_at(m, 2.7, 3.0, {2: STANDING}, {2: (320.0, 620.0)})
-    assert [s[:2] for s in m.stitched] == [(1, 2)] and out[2].state == ALERT
-    run_at(m, 3.0, 5.5, {2: STANDING}, {2: (320.0, 620.0)})
-    assert len(m.events) == 1 and m.events[0].end_reason == "recovered"
+    assert m.stitched == [] and out[2].state == UPRIGHT
+    run_at(m, 3.0, 4.5, {2: STANDING}, {2: (320.0, 620.0)})
+    assert len(m.events) == 1
+    assert m.events[0].track_id == 1 and m.events[0].end_reason == "lost"
+    assert m.active_alerts() == []
+
+
+def test_upright_newcomer_next_to_lost_fallen_track_is_not_stitched():
+    m = FallMonitor(FallConfig())
+    fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.0)
+    assert m._machines[1].state == FALLEN
+    run_at(m, 2.2, 2.5, {2: STANDING}, {2: (320.0, 620.0)})
+    assert m.stitched == []
+
+
+def test_newcomer_that_is_not_clearly_upright_is_stitched():
+    bent = PoseFeatures(torso_angle=45.0, aspect_ratio=0.5, hip_y=600.0, box_height=300.0)
+    wide_no_angle = PoseFeatures(torso_angle=None, aspect_ratio=0.9, hip_y=None, box_height=300.0)
+    narrow_no_angle = PoseFeatures(torso_angle=None, aspect_ratio=0.35, hip_y=None, box_height=500.0)
+    for newcomer, stitched in ((bent, True), (wide_no_angle, True), (narrow_no_angle, False)):
+        m = FallMonitor(FallConfig())
+        fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.5)
+        run_at(m, 2.7, 2.8, {2: newcomer}, {2: (320.0, 620.0)})
+        assert bool(m.stitched) is stitched
 
 
 def test_open_alert_closes_as_lost_when_nothing_stitches():
