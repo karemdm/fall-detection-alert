@@ -91,16 +91,23 @@ The pose models run on CPU. For a GPU, install the PyTorch build matching your C
 [`samples/fall_mix_input.mp4`](samples/README.md#fall-mix-fall_mix_inputmp4): eight GMDCSA24 falls of three subjects
 (day and night, side, forward and backward falls) followed by the Pexels snow fall, cut to ~2 s before each
 labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s. **Alert delay** = `ALERT` time minus the labelled fall onset of
-the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-1.9 s in the published run; `fall_start` is now the first entry into `FALLING` of the episode and is not moved by a `FALLEN` to `FALLING` drop, so it can be earlier in new runs).
+the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-2.3 s in the published run; `fall_start` is now the first entry into `FALLING` of the episode and is not moved by a `FALLEN` to `FALLING` drop, so it can be earlier in new runs).
 
 | Run | Hits | Misses | False alerts | Alert delay after labelled fall start |
 |---|---|---|---|---|
-| `--imgsz 1280`, `--conf 0.30` (default `--conf`; published video, see [why 1280](docs/how-it-works.md)) | **9 / 9** | 0 | 0 | 1.5–2.6 s; two late hits at +4.0 s (S2 02, S3 04) |
-| `--imgsz 1280`, `--conf 0.35` (previous run) | 8 / 9 | 1 (S3 04) | 0 | 1.5–2.6 s, one marginal hit at +4.2 s |
-| `--imgsz 640`, `--conf 0.35` (previous run) | 6 / 9 | 3 (S2 02, S3 04, S3 16) | 0 | 1.5–2.4 s |
+| `--imgsz 1280`, `--conf 0.30` (default `--conf`; published video, see [why 1280](docs/how-it-works.md)) | **9 / 9** | 0 | 0 | 1.5–2.6 s; one late hit at +4.0 s (S3 04) |
+| Previous code (before the id-switch guard), same settings and library versions | 7 / 9 | 2 (S1 11, S2 23) | 0 | not tabulated |
+| `--imgsz 1280`, `--conf 0.35` (earlier run, older library versions) | 8 / 9 | 1 (S3 04) | 0 | 1.5–2.6 s, one marginal hit at +4.2 s |
+| `--imgsz 640`, `--conf 0.35` (earlier run, older library versions) | 6 / 9 | 3 (S2 02, S3 04, S3 16) | 0 | 1.5–2.4 s |
+
+The published run uses the library versions in [`constraints.txt`](constraints.txt)
+(`pip install -r requirements.txt -c constraints.txt`). The first published run (9/9) was made with older versions;
+with the current versions the previous code gave 7/9, because the person at the hard cut into S1 11 and S2 23 was
+stitched onto the previous person's open `ALERT`. The current code refuses to stitch a narrow newcomer below the
+falling angle and gives 9/9 again.
 
 Own measurement on one compilation, not a validation. Lowering `--conf` to 0.30 kept the person lying on the
-patterned floor detected long enough to confirm the two hard segments. In the previous runs the misses came from the pose model losing the person lying
+patterned floor detected long enough to confirm the two hard segments. In the earlier 640 and `--conf 0.35` runs the misses came from the pose model losing the person lying
 on the floor (each re-detection starts a new track and restarts the 1.0 s confirmation), not from the rules.
 Per-segment table, events and observations: [results/README.md](results/README.md#fall-mix).
 
@@ -266,6 +273,7 @@ fall-detection-alert/
 ├── LICENSE
 ├── pyproject.toml
 ├── requirements.txt
+├── constraints.txt     # library versions used for results/fall_mix_*
 ├── docs/
 │   ├── how-it-works.md
 │   └── assets/         # demo.gif, demo_ice.mp4 + poster

@@ -6,8 +6,13 @@ Annotated videos produced by this project, re-encoded to H.264 720p without audi
   ByteTrack, default `FallConfig`; upright tracks with an `n/a` torso angle are not drawn).
 - **Single clips** (below): produced with the previous default `--conf 0.35`, `imgsz=640`, before the `n/a` boxes
   were hidden; re-running them with the current defaults can give slightly different times.
-- **Id-switch repair:** all results in this folder were produced before id-switch repair was limited to tracks lost
-  while not `UPRIGHT`; re-running can change events where a new track appeared near a lost one.
+- **Id-switch repair:** the fall mix was re-run with the current id-switch repair (see the note below). The single
+  clips, the snow clip and the ice compilation were produced earlier, before id-switch repair was limited to tracks
+  lost while not `UPRIGHT` and before a narrow newcomer below the falling angle was refused; re-running can change
+  events where a new track appeared near a lost one.
+- **Library versions:** the fall mix files were produced with the versions in
+  [`../constraints.txt`](../constraints.txt) (`pip install -r requirements.txt -c constraints.txt`). The other
+  files were produced with older versions.
 
 - `gmdcsa24-s1-fall-05_alert.mp4` + `gmdcsa24-s1-fall-05_events.json`: walking, then a forward fall to hands and
   knees and lying on the floor.
@@ -19,13 +24,13 @@ Annotated videos produced by this project, re-encoded to H.264 720p without audi
   [Ice compilation](../samples/README.md#ice-compilation-ice_3minmp4).
 - `snow-pexels-20595440_alert.mp4` + `snow-pexels-20595440_events.json`: outdoor, man kicks a tree, falls backward
   and lies in deep snow; the clip ends ~1 s after he lands (**no alert**, see below).
-- `fall_mix_alert.mp4` + `fall_mix_events.json`: the 55.2 s fall mix (eight GMDCSA24 falls of three subjects plus
+- `fall_mix_alert.mp4` + `fall_mix_events.json` + `fall_mix_trace.csv`: the 55.2 s fall mix (eight GMDCSA24 falls of three subjects plus
   the snow fall), run with **`--imgsz 1280`**; see [Fall mix](#fall-mix) below.
 
 Reproduce (from the repo root):
 
 ```bash
-fall-alert -i samples/fall_mix_input.mp4 -o outputs/fall_mix_alert.mp4 --events-json results/fall_mix_events.json --trace-csv outputs/fall_mix_trace.csv --imgsz 1280 --no-display
+fall-alert -i samples/fall_mix_input.mp4 -o outputs/fall_mix_alert.mp4 --events-json results/fall_mix_events.json --trace-csv results/fall_mix_trace.csv --imgsz 1280 --no-display
 fall-alert -i samples/gmdcsa24-s1-fall-05.mp4 -o outputs/fall-05.mp4 --events-json results/gmdcsa24-s1-fall-05_events.json --trace-csv results/gmdcsa24-s1-fall-05_trace.csv --conf 0.35 --no-display
 fall-alert -i samples/gmdcsa24-s1-fall-11.mp4 -o outputs/fall-11.mp4 --events-json results/gmdcsa24-s1-fall-11_events.json --conf 0.35 --no-display
 fall-alert -i samples/snow-pexels-20595440.mp4 -o outputs/snow-20595440.mp4 --events-json results/snow-pexels-20595440_events.json --conf 0.35 --no-display
@@ -36,61 +41,74 @@ The single-clip commands pass `--conf 0.35` to match how the published single-cl
 ## Fall mix
 
 Input: [`../samples/fall_mix_input.mp4`](../samples/README.md#fall-mix-fall_mix_inputmp4) (segment table, sources
-and licenses there). Default thresholds, `weights/yolo11n-pose.pt`, ByteTrack; nothing was tuned on the mix. The
-mix was run three times: `--imgsz 640` and `--imgsz 1280` at the previous `--conf 0.35`, then `--imgsz 1280` at the
-current `--conf 0.30`. The published video and events are the last run (9/9 hits). Times are mix seconds, from
-`fall_mix_events.json` and the `--trace-csv` output.
+and licenses there). Default thresholds, `weights/yolo11n-pose.pt`, ByteTrack, `--imgsz 1280`, default `--conf 0.30`;
+nothing was tuned on the mix. The published video, events and trace come from one run with the library versions in
+[`../constraints.txt`](../constraints.txt). Times are mix seconds, from `fall_mix_events.json` and
+`fall_mix_trace.csv`.
+
+**Reproducibility note.** The first published run of the mix (9/9) was made with older library versions. Re-running
+the previous code (before the id-switch guard below) with the current versions gave 7/9: at the hard cut into
+segments 5 (S1 11) and 8 (S2 23) the new person was stitched onto the previous person's open `ALERT` and never
+raised an alert of their own. The current code refuses to stitch a narrow newcomer whose torso is below the falling
+angle, which fixes this; with it the mix gives 9/9 and no false alert with the current versions. Own measurement on
+one compilation, not a validation.
 
 Rule used: **hit** if an `ALERT` starts inside `[labelled fall start, labelled fall end + 2 s]` of the segment
 (clipped to the segment end), **miss** otherwise; a **false alert** is an `ALERT` starting outside every such
-window. The **alert delay** (the "+x s" values) is the `ALERT` time minus the labelled fall onset of the segment, not minus
-the detector's `fall_start` in the events JSON (which is later; `start - fall_start` there is 1.0-1.9 s).
+window. The **alert delay** (the "+x s" values) is the `ALERT` time minus the labelled fall onset of the segment, not
+minus the detector's `fall_start` in the events JSON (which is later; `start - fall_start` there is 1.0-2.3 s).
 
-Columns "(1280)" are the published run (`--imgsz 1280`, `--conf 0.30`); "(640)" is the earlier run at `--conf 0.35`.
-`FALLING` (1280) is the first `FALLING` of the segment in the trace; the `fall_start` in the events JSON can be later
-when the alerting track is a newer track id or re-entered `FALLING` from `FALLEN` (segments 2, 3 and 7).
+`FALLING` is the first non-`UPRIGHT` state of the segment in the trace; the `fall_start` in the events JSON is the same
+time except in segment 3, where the alerting track (#38) is a newer track id whose `FALLING` started at 17.83 s.
+Segment 5 is first seen as `FALLEN`.
 
-| # | Segment | Labelled fall (mix s) | `FALLING` (1280) | `ALERT` (1280) | Result 1280 | `ALERT` (640) | Result 640 |
-|---|---|---|---|---|---|---|---|
-| 1 | S1 05, walking, right side fall | 1.80–5.00 | 2.20 | 3.27 (+1.47 s) | hit | 3.30 | hit |
-| 2 | S2 02, walking, right side fall | 7.87–13.17 | 8.33 | 11.87 (+4.00 s) | hit (late) | none | miss |
-| 3 | S3 04, walking, backward fall | 14.80–18.60 | 15.07 | 18.83 (+4.03 s) | hit (late) | none | miss |
-| 4 | S2 17, walking, forward fall | 21.07–24.57 | 21.70 | 22.73 (+1.66 s) | hit | 22.77 | hit |
-| 5 | S1 11, standing, backward fall | 26.07–31.07 | 27.13 (`FALLEN`) | 28.13 (+2.06 s) | hit | 28.23 | hit |
-| 6 | S2 13, night, backward fall (side view) | 33.17–38.67 | 34.37 | 35.67 (+2.50 s) | hit | 35.57 | hit |
-| 7 | S3 16, night, walking, left side fall | 41.40–45.67 | 41.57 | 44.00 (+2.60 s) | hit | none | miss |
-| 8 | S2 23, standing, sideways fall | 47.67–51.07 | 48.27 | 49.60 (+1.93 s) | hit | 49.43 | hit |
-| 9 | Pexels snow, backward fall (visual estimate) | ~53.60–54.30 | 53.23 | 55.13 (+1.53 s), 0.1 s before the end | hit | 55.20 (last frame) | hit |
+| # | Segment | Labelled fall (mix s) | `FALLING` | `ALERT` | Alerting track | Result |
+|---|---|---|---|---|---|---|
+| 1 | S1 05, walking, right side fall | 1.80–5.00 | 2.20 | 3.27 (+1.47 s) | #1 | hit |
+| 2 | S2 02, walking, right side fall | 7.87–13.17 | 8.33 | 9.43 (+1.56 s) | #22 | hit |
+| 3 | S3 04, walking, backward fall | 14.80–18.60 | 15.07 | 18.83 (+4.03 s) | #38 | hit (late) |
+| 4 | S2 17, walking, forward fall | 21.07–24.57 | 21.70 | 22.73 (+1.66 s) | #39 | hit |
+| 5 | S1 11, standing, backward fall | 26.07–31.07 | 27.13 (`FALLEN`) | 28.13 (+2.06 s) | #44 | hit |
+| 6 | S2 13, night, backward fall (side view) | 33.17–38.67 | 34.37 | 35.67 (+2.50 s) | #55 | hit |
+| 7 | S3 16, night, walking, left side fall | 41.40–45.67 | 41.67 | 44.00 (+2.60 s) | #72 | hit |
+| 8 | S2 23, standing, sideways fall | 47.67–51.07 | 48.30 | 49.60 (+1.93 s) | #79 | hit |
+| 9 | Pexels snow, backward fall (visual estimate) | ~53.60–54.30 | 53.23 | 55.13 (+1.53 s), 0.1 s before the end | #84 | hit |
 
 Summary (own measurement on one compilation, not a validation and not an accuracy figure):
 
 | Run | Hits | Misses | False alerts |
 |---|---|---|---|
-| `--imgsz 1280`, `--conf 0.30` (published) | 9 / 9 | 0 | 0 |
-| `--imgsz 1280`, `--conf 0.35` (previous run) | 8 / 9 | 1 (segment 3) | 0 |
-| `--imgsz 640`, `--conf 0.35` (previous run) | 6 / 9 | 3 (segments 2, 3, 7) | 0 |
+| Current code, `--imgsz 1280`, `--conf 0.30`, current library versions (published) | 9 / 9 | 0 | 0 |
+| Previous code (before the id-switch guard), same settings, current library versions | 7 / 9 | 2 (segments 5, 8) | 0 |
+| Earlier published run, `--imgsz 1280`, `--conf 0.30`, older library versions | 9 / 9 | 0 | 0 |
+| Earlier run, `--imgsz 1280`, `--conf 0.35`, older library versions | 8 / 9 | 1 (segment 3) | 0 |
+| Earlier run, `--imgsz 640`, `--conf 0.35`, older library versions | 6 / 9 | 3 (segments 2, 3, 7) | 0 |
+
+The last three rows are earlier runs with older library versions and older code; their per-segment times were not
+re-measured. For the 7 / 9 row only the hit count and the missed segments are recorded.
 
 Observations (from the trace and frames of the annotated videos):
 
-- **Misses in the previous runs were detection losses on the floor, not rule failures.** In segments 2, 3 and 7
-  the person was tracked `UPRIGHT` → `FALLING` (torso angle crossing 45°), but once lying on the patterned floor
-  mat YOLO11n-pose detected the body only in short bursts. Every new detection started a new track id, so the
-  1.0 s `fallen_seconds` confirmation restarted again and again. At 1280 / `--conf 0.35` the detections on the
+- **Misses in the earlier 640 and `--conf 0.35` runs were detection losses on the floor, not rule failures.** In
+  segments 2, 3 and 7 the person was tracked `UPRIGHT` → `FALLING` (torso angle crossing 45°), but once lying on the
+  patterned floor mat YOLO11n-pose detected the body only in short bursts. Every new detection started a new track id,
+  so the 1.0 s `fallen_seconds` confirmation restarted again and again. At 1280 / `--conf 0.35` the detections on the
   floor were stable enough in segments 2 and 7 but not in segment 3 (lying on the back across the frame, arms
   spread). Lowering `--conf` to 0.30 kept the lying person detected long enough in segment 3 as well.
-- Segments 2 and 3 are **late** hits in the published run (+4.0 s): the alerting tracks (#27, #38) are newer track
-  ids whose `FALLING` started at 10.77 s and 17.83 s, and both were lost shortly after the alert (12.83 s and
-  19.00 s, `end_reason: lost`); the banner stays up to `lost_seconds` = 2 s longer in the video.
+- Segment 3 is the only **late** hit (+4.0 s): the alerting track (#38) is a newer track id whose `FALLING` started
+  at 17.83 s, and it was lost shortly after the alert (19.00 s, `end_reason: lost`); the banner stays up to
+  `lost_seconds` = 2 s longer in the video. Segment 2 alerts on track #22 at +1.56 s in the current run (it was a
+  late hit, +4.0 s on track #27, in the earlier published run).
 - Segment 9 alerted at 1280 and at 640, unlike the separate snow clip at 640 (no alert, see below). The mix
   resamples the 60 fps clip to 30 fps and pads it into a 1280x720 frame, which changed the tracking (no id switch
   on the snow); the alert fires only 0.1 s before the end of the mix, so this is a fragile result.
-- **No false alerts.** Non-fall postures that briefly entered `FALLING` / `FALLEN` (bending over at the start of
-  segments 6 and 8 at 640) returned to `UPRIGHT` without an alert. The hanging clothes on the left of the Subject 2
-  / Subject 3 room were sometimes detected as an extra `UPRIGHT` person; these tracks never left `UPRIGHT`.
+- **No false alerts.** Every `ALERT` starts inside a labelled window. The hanging clothes on the left of the Subject
+  2 / Subject 3 room were sometimes detected as an extra `UPRIGHT` person; these tracks never left `UPRIGHT`.
 - **Cuts between segments.** The previous person's track is only dropped after `lost_seconds` (2 s) without a
-  detection, so the red banner of the last alert stays on for up to ~2 s into the next segment (visible in
-  `fall_mix_alert.mp4`), and at 31.20–31.33 s the alerting track #44 of segment 5 was briefly matched to the new person of
-  segment 6. These are artefacts of the hard cuts, not new alert events.
+  detection, so the red banner of the last alert can stay on for up to ~2 s into the next segment (visible in
+  `fall_mix_alert.mp4`), and at 31.17–31.33 s the alerting track #44 of segment 5 was still matched to the new person
+  of segment 6 (torso angle 58-60° vs 77° before). These are artefacts of the hard cuts, not new alert events. The
+  stitching guard stops a cut from hiding the next person's own fall (the 7 / 9 run above).
 - Delays from the labelled fall start to `ALERT` were 1.5–2.6 s on the clean hits; they include the time to reach
   the floor and the 1.0 s confirmation by design.
 
