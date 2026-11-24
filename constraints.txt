@@ -1,0 +1,9 @@
+# Library versions used to produce results/fall_mix_*, for reproducing them (Python 3.12).
+# Use together with requirements.txt:  pip install -r requirements.txt -c constraints.txt
+# torch / torchvision were the CPU builds (2.15.0+cpu, 0.29.2+cpu); a plain version pin matches any local build.
+ultralytics==8.4.215
+torch==2.15.0
+torchvision==0.29.2
+opencv-python==5.1.0.95
+numpy==2.5.4
+lap==0.5.14

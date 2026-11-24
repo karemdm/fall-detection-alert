@@ -91,16 +91,23 @@ The pose models run on CPU. For a GPU, install the PyTorch build matching your C
 [`samples/fall_mix_input.mp4`](samples/README.md#fall-mix-fall_mix_inputmp4): eight GMDCSA24 falls of three subjects
 (day and night, side, forward and backward falls) followed by the Pexels snow fall, cut to ~2 s before each
 labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s. **Alert delay** = `ALERT` time minus the labelled fall onset of
-the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-1.9 s in the published run; `fall_start` is now the first entry into `FALLING` of the episode and is not moved by a `FALLEN` to `FALLING` drop, so it can be earlier in new runs).
+the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-2.3 s in the published run; `fall_start` is now the first entry into `FALLING` of the episode and is not moved by a `FALLEN` to `FALLING` drop, so it can be earlier in new runs).
 
 | Run | Hits | Misses | False alerts | Alert delay after labelled fall start |
 |---|---|---|---|---|
-| `--imgsz 1280`, `--conf 0.30` (default `--conf`; published video, see [why 1280](docs/how-it-works.md)) | **9 / 9** | 0 | 0 | 1.5–2.6 s; two late hits at +4.0 s (S2 02, S3 04) |
-| `--imgsz 1280`, `--conf 0.35` (previous run) | 8 / 9 | 1 (S3 04) | 0 | 1.5–2.6 s, one marginal hit at +4.2 s |
-| `--imgsz 640`, `--conf 0.35` (previous run) | 6 / 9 | 3 (S2 02, S3 04, S3 16) | 0 | 1.5–2.4 s |
+| `--imgsz 1280`, `--conf 0.30` (default `--conf`; published video, see [why 1280](docs/how-it-works.md)) | **9 / 9** | 0 | 0 | 1.5–2.6 s; one late hit at +4.0 s (S3 04) |
+| Previous code (before the id-switch guard), same settings and library versions | 7 / 9 | 2 (S1 11, S2 23) | 0 | not tabulated |
+| `--imgsz 1280`, `--conf 0.35` (earlier run, older library versions) | 8 / 9 | 1 (S3 04) | 0 | 1.5–2.6 s, one marginal hit at +4.2 s |
+| `--imgsz 640`, `--conf 0.35` (earlier run, older library versions) | 6 / 9 | 3 (S2 02, S3 04, S3 16) | 0 | 1.5–2.4 s |
+
+The published run uses the library versions in [`constraints.txt`](constraints.txt)
+(`pip install -r requirements.txt -c constraints.txt`). The first published run (9/9) was made with older versions;
+with the current versions the previous code gave 7/9, because the person at the hard cut into S1 11 and S2 23 was
+stitched onto the previous person's open `ALERT`. The current code refuses to stitch a narrow newcomer below the
+falling angle and gives 9/9 again.
 
 Own measurement on one compilation, not a validation. Lowering `--conf` to 0.30 kept the person lying on the
-patterned floor detected long enough to confirm the two hard segments. In the previous runs the misses came from the pose model losing the person lying
+patterned floor detected long enough to confirm the two hard segments. In the earlier 640 and `--conf 0.35` runs the misses came from the pose model losing the person lying
 on the floor (each re-detection starts a new track and restarts the 1.0 s confirmation), not from the rules.
 Per-segment table, events and observations: [results/README.md](results/README.md#fall-mix).
 
@@ -124,14 +131,15 @@ are reported (no annotated video):
 |---|---|---|---|---|
 | fall-05 | 1.8–5.0 s (label) | 2.27 s | 3.31 s | yes (0–2.24 s) |
 | fall-11 | 1.0–6.0 s (label) | 2.03 s | 3.15 s | yes (0–2.00 s) |
-| snow-20595440 | ~2.9–3.6 s, ends lying | 3.35 s | none (`FALLEN` at 3.45 s, clip ends 4.55 s) | yes (0–3.30 s) |
+| snow-20595440 | ~2.9–3.6 s, ends lying | 3.33 s | 4.42 s, ends `end_of_video` at 4.53 s (track #2, see note below) | yes (0–3.30 s) |
 | unidata-sample_1 (slip on snow) | ~3.4 s, lies then gets up | 3.47 s | 4.54 s, ends `recovered` at 10.28 s | yes (0–3.4 s) |
-| unidata-sample_2 (slip on icy sidewalk, small person) | ~5.5 s, gets up | 5.54 s | 6.66 s with `--imgsz 1280`, ends `recovered` at 12.40 s; **none at the default 640** (person lost by the tracker) | yes |
+| unidata-sample_2 (slip on icy sidewalk, small person) | ~5.5 s, gets up | 5.54 s | 6.66 s with `--imgsz 1280`, ends `recovered` at 12.36 s; **none at the default 640** (person lost by the tracker) | yes |
 
 For small or distant people, run with `--imgsz 1280`.
 
-No false alerts on any clip. The snow clip was detected (`FALLEN`) but ends before the 1.0 s `fallen_seconds`
-confirmation (an ID switch at 4.1 s also restarted the timer). Details in
+No false alerts on any clip. On the snow clip the alert fires only 0.1 s before the end of the video: the tracker
+switched id at 4.1 s (#1 to #2) and the current code carries the fall state over to the new id, so the 1.0 s
+`fallen_seconds` timer was not restarted. It is a fragile result on a 4.55 s clip. Details in
 [results/README.md](results/README.md#snow-clips-outdoor-pexels).
 
 Event files, observations and attribution: [results/README.md](results/README.md).
@@ -266,6 +274,7 @@ fall-detection-alert/
 ├── LICENSE
 ├── pyproject.toml
 ├── requirements.txt
+├── constraints.txt     # library versions used for results/fall_mix_*
 ├── docs/
 │   ├── how-it-works.md
 │   └── assets/         # demo.gif, demo_ice.mp4 + poster
@@ -309,7 +318,7 @@ python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('
 - **Tested on a handful of clips only** (single clips, one 55 s compilation of eight GMDCSA24 falls from three
   subjects plus one snow clip, and a doorbell / handheld compilation of slips on ice). No recall, false-alarm rate or latency statistics are claimed. Thresholds are generic starting values, not tuned on a dataset.
 - **Falls that end sitting are not detected** (torso stays upright, box not wide enough), and very short clips can end
-  before the `fallen_seconds` confirmation (the latter happened on the snow clip).
+  before the `fallen_seconds` confirmation (the snow clip is such a case: its alert fires 0.1 s before the clip ends).
 - **Lying on purpose looks like a fall** (bed, sofa, floor exercise) once the posture is held; slow falls and
   sitting down quickly are not distinguished from falls by these rules.
 - **View dependence.** A person lying along the camera's line of sight can keep a narrow box and a foreshortened

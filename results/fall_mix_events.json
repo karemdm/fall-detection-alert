@@ -9,9 +9,9 @@
       "end_reason": "lost"
     },
     {
-      "track_id": 27,
-      "fall_start": 10.767,
-      "start": 11.867,
+      "track_id": 22,
+      "fall_start": 8.333,
+      "start": 9.433,
       "end": 12.833,
       "end_reason": "lost"
     },
@@ -33,26 +33,26 @@
       "track_id": 44,
       "fall_start": 27.133,
       "start": 28.133,
-      "end": 31.333,
+      "end": 31.4,
       "end_reason": "lost"
     },
     {
       "track_id": 55,
       "fall_start": 34.367,
       "start": 35.667,
-      "end": 36.733,
+      "end": 39.267,
       "end_reason": "lost"
     },
     {
       "track_id": 72,
-      "fall_start": 43.0,
+      "fall_start": 41.667,
       "start": 44.0,
       "end": 45.6,
       "end_reason": "lost"
     },
     {
       "track_id": 79,
-      "fall_start": 48.267,
+      "fall_start": 48.3,
       "start": 49.6,
       "end": 51.533,
       "end_reason": "lost"
