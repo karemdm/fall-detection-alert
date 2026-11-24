@@ -105,3 +105,99 @@ def test_stitching_can_be_disabled():
     run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
     run_at(m, 1.1, 1.5, {2: STANDING}, {2: (300.0, 400.0)})
     assert m.stitched == []
+
+
+def test_track_lost_longer_than_lost_seconds_is_not_stitched():
+    m = FallMonitor(FallConfig(lost_seconds=2.0))
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+    run_at(m, 3.5, 4.0, {2: STANDING}, {2: (300.0, 400.0)})
+    assert m.stitched == []
+
+
+def test_stitch_picks_the_nearest_lost_track():
+    m = FallMonitor(FallConfig())
+    run_at(m, 0.0, 1.0, {1: STANDING, 2: STANDING}, {1: (100.0, 400.0), 2: (400.0, 400.0)})
+    run_at(m, 1.2, 1.5, {3: STANDING}, {3: (380.0, 400.0)})
+    assert [s[:2] for s in m.stitched] == [(2, 3)]
+
+
+def test_stitch_distance_is_in_body_heights():
+    cfg = FallConfig(stitch_distance=1.0)
+    # box height 500 px: 450 px away is 0.9 heights (stitched), 600 px is 1.2 heights (not)
+    near, far = FallMonitor(cfg), FallMonitor(cfg)
+    for m, x in ((near, 750.0), (far, 900.0)):
+        run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+        run_at(m, 1.2, 1.5, {2: STANDING}, {2: (x, 400.0)})
+    assert len(near.stitched) == 1 and far.stitched == []
+
+
+def test_track_still_observed_is_not_stitched_to_a_new_one():
+    m = FallMonitor(FallConfig())
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+    m.update(1.0, {1: STANDING, 2: STANDING}, {1: (300.0, 400.0), 2: (310.0, 400.0)})
+    assert m.stitched == []
+
+
+def test_no_positions_means_no_stitching():
+    m = FallMonitor(FallConfig())
+    run(m, 0.0, 1.0, {1: STANDING})
+    run(m, 1.2, 1.5, {2: STANDING})
+    assert m.stitched == []
+
+
+def test_stitched_alert_is_one_event_and_closes_when_the_new_track_is_lost():
+    cfg = FallConfig(lost_seconds=1.0)
+    m = FallMonitor(cfg)
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+    run_at(m, 1.0, 2.5, {1: LYING}, {1: (320.0, 600.0)})
+    assert len(m.events) == 1
+    run_at(m, 2.6, 4.0, {2: LYING}, {2: (330.0, 620.0)})
+    run_at(m, 4.0, 6.0, {}, {})
+    assert len(m.events) == 1
+    event = m.events[0]
+    assert event.track_id == 1 and event.end_reason == "lost" and abs(event.end - 3.9) < 1e-9
+    assert m.active_alerts() == []
+
+
+def test_same_id_after_being_dropped_starts_a_new_machine_and_event():
+    m = FallMonitor(FallConfig(lost_seconds=1.0, stitch_distance=0))
+    run(m, 0.0, 1.0, {4: STANDING})
+    run(m, 1.0, 3.0, {4: LYING})
+    run(m, 3.0, 5.0, {})
+    out = run(m, 5.0, 5.5, {4: STANDING})
+    assert out[4].state == UPRIGHT
+    run(m, 5.5, 6.5, {4: STANDING})
+    run(m, 6.5, 8.5, {4: LYING})
+    assert [e.end_reason for e in m.events] == ["lost", None]
+
+
+def test_second_fall_after_recovery_is_a_second_event():
+    m = FallMonitor(FallConfig())
+    run(m, 0.0, 1.0, {1: STANDING})
+    run(m, 1.0, 3.0, {1: LYING})
+    run(m, 3.0, 6.0, {1: STANDING})
+    run(m, 6.0, 8.0, {1: LYING})
+    assert [e.end_reason for e in m.events] == ["recovered", None]
+
+
+def test_empty_video_has_no_events():
+    m = FallMonitor(FallConfig())
+    assert m.update(0.0, {}) == {}
+    assert m.finish() == [] and m.active_alerts() == []
+
+
+def test_open_event_serializes_with_null_end():
+    m = FallMonitor(FallConfig())
+    run(m, 0.0, 1.0, {1: STANDING})
+    run(m, 1.0, 3.0, {1: LYING})
+    d = m.events[0].to_dict()
+    assert d["end"] is None and d["end_reason"] is None
+    assert d["fall_start"] == 1.0 and d["start"] == 2.0
+
+
+def test_active_alerts_max_age_needs_a_time():
+    m = FallMonitor(FallConfig())
+    run(m, 0.0, 1.0, {1: STANDING})
+    run(m, 1.0, 3.0, {1: LYING})
+    assert len(m.active_alerts(max_age=0.3)) == 1
+    assert len(m.active_alerts(t=2.95, max_age=0.3)) == 1
