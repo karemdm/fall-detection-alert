@@ -4,15 +4,16 @@ Annotated videos produced by this project, re-encoded to H.264 720p without audi
 
 - **Fall mix** (`fall_mix_alert.mp4`): current defaults (`weights/yolo11n-pose.pt`, `--conf 0.30`, `--imgsz 1280`,
   ByteTrack, default `FallConfig`; upright tracks with an `n/a` torso angle are not drawn).
-- **Single clips** (below): produced with the previous default `--conf 0.35`, `imgsz=640`, before the `n/a` boxes
-  were hidden; re-running them with the current defaults can give slightly different times.
-- **Id-switch repair:** the fall mix was re-run with the current id-switch repair (see the note below). The single
-  clips, the snow clip and the ice compilation were produced earlier, before id-switch repair was limited to tracks
+- **Single clips and snow clip** (below): re-run with the current code and the library versions in
+  `constraints.txt`, with `--conf 0.35`, `imgsz=640`. fall-05 and fall-11 re-ran with identical events (their
+  videos were left as they were); the snow clip changed from no alert to an alert (see below).
+- **Id-switch repair:** the fall mix and the single and snow clips were run with the current id-switch repair (see
+  the note below). Only the ice compilation was produced earlier, before id-switch repair was limited to tracks
   lost while not `UPRIGHT` and before a narrow newcomer below the falling angle was refused; re-running can change
   events where a new track appeared near a lost one.
 - **Library versions:** the fall mix files were produced with the versions in
   [`../constraints.txt`](../constraints.txt) (`pip install -r requirements.txt -c constraints.txt`). The other
-  files were produced with older versions.
+  files (the ice compilation and, for the single clips, the older videos) were produced with older versions.
 
 - `gmdcsa24-s1-fall-05_alert.mp4` + `gmdcsa24-s1-fall-05_events.json`: walking, then a forward fall to hands and
   knees and lying on the floor.
@@ -23,7 +24,7 @@ Annotated videos produced by this project, re-encoded to H.264 720p without audi
 - `ice_3min_alert_raw.mp4`: raw annotated output on the ice compilation; source and licensing: see
   [Ice compilation](../samples/README.md#ice-compilation-ice_3minmp4).
 - `snow-pexels-20595440_alert.mp4` + `snow-pexels-20595440_events.json`: outdoor, man kicks a tree, falls backward
-  and lies in deep snow; the clip ends ~1 s after he lands (**no alert**, see below).
+  and lies in deep snow; the clip ends ~1 s after he lands (alert at 4.42 s, 0.1 s before the end, see below).
 - `fall_mix_alert.mp4` + `fall_mix_events.json` + `fall_mix_trace.csv`: the 55.2 s fall mix (eight GMDCSA24 falls of three subjects plus
   the snow fall), run with **`--imgsz 1280`**; see [Fall mix](#fall-mix) below.
 
@@ -99,7 +100,7 @@ Observations (from the trace and frames of the annotated videos):
   at 17.83 s, and it was lost shortly after the alert (19.00 s, `end_reason: lost`); the banner stays up to
   `lost_seconds` = 2 s longer in the video. Segment 2 alerts on track #22 at +1.56 s in the current run (it was a
   late hit, +4.0 s on track #27, in the earlier published run).
-- Segment 9 alerted at 1280 and at 640, unlike the separate snow clip at 640 (no alert, see below). The mix
+- Segment 9 alerted at 1280 and at 640, like the separate snow clip at 640 (alert at 4.42 s, see below). The mix
   resamples the 60 fps clip to 30 fps and pads it into a 1280x720 frame, which changed the tracking (no id switch
   on the snow); the alert fires only 0.1 s before the end of the mix, so this is a fragile result.
 - **No false alerts.** Every `ALERT` starts inside a labelled window. The hanging clothes on the left of the Subject
@@ -151,20 +152,26 @@ label); state times come from `--trace-csv`.
 
 | Clip | Fall (visual estimate) | `FALLING` | `FALLEN` | `ALERT` | Upright before? |
 |---|---|---|---|---|---|
-| snow-pexels-20595440 | upright until ~2.9 s, lying on the snow ~3.5–3.6 s | 3.35 s | 3.45 s | none (clip ends at 4.55 s) | yes (0–3.30 s) |
+| snow-pexels-20595440 | upright until ~2.9 s, lying on the snow ~3.5–3.6 s | 3.33 s | 3.42 s | 4.42 s (track #2, clip ends at 4.55 s) | yes (0–3.30 s) |
 
 Observations (from the trace and frames of the annotated videos):
 
 - **No false alerts** on the snow clip: the person was `UPRIGHT` before the fall, including the kicking motion (torso angle up to ~40° before the fall,
   below the 45° `falling_angle`).
-- **20595440 — detected but not confirmed before the clip ends.** The torso angle crossed 45° at 3.35 s
-  (`FALLING`) and 60° at 3.45 s (`FALLEN`), about when the person reaches the snow. The 1.0 s `fallen_seconds`
-  confirmation would end at ~4.45 s, but track #1 was last seen at 4.08 s (body partly hidden in deep snow, likely cause) and a new track #2
-  appeared in `FALLEN` at 4.12 s, restarting the timer; the clip ends at 4.55 s. In a single exploratory run with
-  `--fallen-seconds 0.5` (not kept, not a default change) track #1 alerted at 3.92 s.
-- Possible changes, **not applied**: a shorter `fallen_seconds` for short clips (more alerts on brief lying
-  postures), or carrying the `FALLEN` timer over when a new track appears at the same place. Neither was tested on
-  more data.
+- **20595440 — alert 0.1 s before the clip ends.** The torso angle crossed 45° at 3.33 s (`FALLING`) and 60° at
+  3.42 s (`FALLEN`), about when the person reaches the snow. Track #1 was last seen at 4.08 s (body partly hidden
+  in deep snow, likely cause) and a new track #2 appeared at 4.12 s, wide (aspect ~2.0) and tilted. With the current
+  code the id-switch repair takes over the lost `FALLEN` state of #1 (the newcomer is not a narrow one below the
+  falling angle, so it is accepted), so #2 starts in `FALLEN` with `fall_start` 3.33 s and the lying timer of #1
+  (since 3.42 s) keeps running. `ALERT` fires at 4.42 s (3.42 s + 1.0 s `fallen_seconds`); the clip ends at 4.55 s
+  (events: track 2, `fall_start` 3.33 s, alert 4.42-4.53 s, `end_of_video`). The published earlier run of this
+  clip (older code, no alert) lost the track at 4.08 s and #2 started in `FALLEN` at 4.12 s with a restarted timer,
+  so the clip ended before the confirmation. Frames at 3.3, 3.6 and 4.42 s show the person falling backward and then
+  lying in the snow, so this is a true detection (visual check). It is a marginal result on a 4.55 s clip: the
+  alert depends on the id-switch repair; in a single exploratory run with `--fallen-seconds 0.5` (not kept, not a
+  default change) the old code alerted at 3.92 s.
+- Possible change, **not applied**: a shorter `fallen_seconds` for short clips (more alerts on brief lying
+  postures). Not tested on more data.
 
 ## Source footage
 

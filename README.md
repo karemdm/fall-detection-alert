@@ -131,14 +131,15 @@ are reported (no annotated video):
 |---|---|---|---|---|
 | fall-05 | 1.8–5.0 s (label) | 2.27 s | 3.31 s | yes (0–2.24 s) |
 | fall-11 | 1.0–6.0 s (label) | 2.03 s | 3.15 s | yes (0–2.00 s) |
-| snow-20595440 | ~2.9–3.6 s, ends lying | 3.35 s | none (`FALLEN` at 3.45 s, clip ends 4.55 s) | yes (0–3.30 s) |
+| snow-20595440 | ~2.9–3.6 s, ends lying | 3.33 s | 4.42 s, ends `end_of_video` at 4.53 s (track #2, see note below) | yes (0–3.30 s) |
 | unidata-sample_1 (slip on snow) | ~3.4 s, lies then gets up | 3.47 s | 4.54 s, ends `recovered` at 10.28 s | yes (0–3.4 s) |
-| unidata-sample_2 (slip on icy sidewalk, small person) | ~5.5 s, gets up | 5.54 s | 6.66 s with `--imgsz 1280`, ends `recovered` at 12.40 s; **none at the default 640** (person lost by the tracker) | yes |
+| unidata-sample_2 (slip on icy sidewalk, small person) | ~5.5 s, gets up | 5.54 s | 6.66 s with `--imgsz 1280`, ends `recovered` at 12.36 s; **none at the default 640** (person lost by the tracker) | yes |
 
 For small or distant people, run with `--imgsz 1280`.
 
-No false alerts on any clip. The snow clip was detected (`FALLEN`) but ends before the 1.0 s `fallen_seconds`
-confirmation (an ID switch at 4.1 s also restarted the timer). Details in
+No false alerts on any clip. On the snow clip the alert fires only 0.1 s before the end of the video: the tracker
+switched id at 4.1 s (#1 to #2) and the current code carries the fall state over to the new id, so the 1.0 s
+`fallen_seconds` timer was not restarted. It is a fragile result on a 4.55 s clip. Details in
 [results/README.md](results/README.md#snow-clips-outdoor-pexels).
 
 Event files, observations and attribution: [results/README.md](results/README.md).
@@ -317,7 +318,7 @@ python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('
 - **Tested on a handful of clips only** (single clips, one 55 s compilation of eight GMDCSA24 falls from three
   subjects plus one snow clip, and a doorbell / handheld compilation of slips on ice). No recall, false-alarm rate or latency statistics are claimed. Thresholds are generic starting values, not tuned on a dataset.
 - **Falls that end sitting are not detected** (torso stays upright, box not wide enough), and very short clips can end
-  before the `fallen_seconds` confirmation (the latter happened on the snow clip).
+  before the `fallen_seconds` confirmation (the snow clip is such a case: its alert fires 0.1 s before the clip ends).
 - **Lying on purpose looks like a fall** (bed, sofa, floor exercise) once the posture is held; slow falls and
   sitting down quickly are not distinguished from falls by these rules.
 - **View dependence.** A person lying along the camera's line of sight can keep a narrow box and a foreshortened
