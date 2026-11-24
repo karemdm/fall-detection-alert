@@ -29,8 +29,9 @@ class PoseFeatures:
     """Per-frame features of one person.
 
     Attributes:
-        torso_angle: Angle of shoulder-mid -> hip-mid from vertical, degrees in
-            ``[0, 180]`` (0 = upright, 90 = horizontal), or ``None`` if gated out.
+        torso_angle: Angle of shoulder -> hip from vertical (same-side pairs, averaged when both
+            sides are visible), degrees in ``[0, 180]`` (0 = upright, 90 = horizontal), or ``None``
+            if no same-side pair passes the gate.
         aspect_ratio: Box width / height.
         hip_y: Vertical image position of the hip midpoint, or ``None`` if gated out.
         box_height: Box height in pixels.
@@ -74,6 +75,26 @@ def angle_from_vertical(top: Point, bottom: Point) -> float:
     return math.degrees(math.atan2(abs(dx), dy))
 
 
+def torso_angle(keypoints: Sequence[Keypoint], min_conf: float) -> Optional[float]:
+    """Torso angle from vertical using same-side shoulder/hip pairs only.
+
+    The left pair (shoulder 5, hip 11) and the right pair (shoulder 6, hip 12) each give an
+    angle when both of their points pass ``min_conf``; with both pairs the two angles are
+    averaged. A shoulder of one side with only the hip of the other side (a diagonal) is not used,
+    because on a lying or turned body it gives a skewed angle.
+
+    Returns:
+        The angle in degrees, or ``None`` if neither side has both points.
+    """
+    if len(keypoints) <= RIGHT_HIP:
+        return None
+    angles = []
+    for s, h in ((LEFT_SHOULDER, LEFT_HIP), (RIGHT_SHOULDER, RIGHT_HIP)):
+        if keypoints[s][2] >= min_conf and keypoints[h][2] >= min_conf:
+            angles.append(angle_from_vertical(keypoints[s][:2], keypoints[h][:2]))
+    return sum(angles) / len(angles) if angles else None
+
+
 def aspect_ratio(box: Box) -> float:
     """Width / height of a box (``inf`` for a zero-height box)."""
     w = max(0.0, box[2] - box[0])
@@ -84,8 +105,8 @@ def aspect_ratio(box: Box) -> float:
 def compute_features(keypoints: Sequence[Keypoint], box: Box, min_conf: float) -> PoseFeatures:
     """Computes the torso angle, aspect ratio and hip height of one person.
 
-    The torso angle needs at least one shoulder and one hip above ``min_conf``;
-    the hip position needs at least one hip.
+    The torso angle needs a shoulder and the hip of the same side above ``min_conf`` (see
+    :func:`torso_angle`); the hip position needs at least one hip.
 
     Args:
         keypoints: 17 COCO keypoints ``(x, y, conf)``.
@@ -95,11 +116,10 @@ def compute_features(keypoints: Sequence[Keypoint], box: Box, min_conf: float) -
     Returns:
         The :class:`PoseFeatures`.
     """
-    shoulders = hips = None
+    hips = None
     if len(keypoints) > RIGHT_HIP:
-        shoulders = visible_midpoint(keypoints[LEFT_SHOULDER], keypoints[RIGHT_SHOULDER], min_conf)
         hips = visible_midpoint(keypoints[LEFT_HIP], keypoints[RIGHT_HIP], min_conf)
-    angle = angle_from_vertical(shoulders, hips) if shoulders and hips else None
+    angle = torso_angle(keypoints, min_conf)
     return PoseFeatures(
         torso_angle=angle,
         aspect_ratio=aspect_ratio(box),
