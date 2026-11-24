@@ -12,7 +12,7 @@ flowchart TD
     C --> D["Torso angle θ from vertical<br/>same-side shoulder → hip, averaged"]
     C --> E["Hip-mid height y_hip"]
     B --> F["Box aspect ratio w / h<br/>reference height H = max box height over 2 s"]
-    E --> G["Hip velocity v = Δy_hip / Δt / H<br/>over 0.3 s"]
+    E --> G["Hip velocity v = Δy_hip / Δt / H<br/>median pairwise slope over 0.3 s"]
     F --> G
     D --> R["Id-switch repair<br/>(only for lost tracks that were not UPRIGHT)<br/>which track's state machine gets the frame"]
     F --> R
@@ -65,9 +65,11 @@ the angle.
 v = (y_hip(t) − y_hip(t − Δt)) / Δt / H        [body heights per second]
 ```
 
-It uses the oldest and the newest hip sample inside the window (no smoothing) and is computed only when they span
-at least half the window; frames where the hips are gated out are skipped. With less than about 3.4 frames per second
-the window holds a single sample and `v` is never available. Time comes from the frame timestamps, not from a frame
+`Δy_hip / Δt` is a robust slope: the median of the slopes between all pairs of hip samples in the window (Theil-Sen),
+so one glitchy keypoint frame does not decide the value. The last sample before the window is kept as an extra
+anchor (used if it is at most twice the window before the newest sample), and the samples must span at least half the
+window; frames where the hips are gated out are skipped. The anchor keeps `v` available down to about 1.7 frames per
+second (default window); below that it is never available. Time comes from the frame timestamps, not from a frame
 count, so a variable frame rate does not change the units.
 
 ## 3. Posture classes
@@ -142,7 +144,7 @@ flowchart TD
 | `min_kp_conf` | 0.5 | Fewer, more reliable keypoints; more frames fall back to the aspect ratio only. |
 | `falling_angle` | 45° | `FALLING` starts later in the fall; fewer `FALLING` episodes from bending. |
 | `fall_velocity` | 0.8 H/s | The velocity cue fires only on faster drops. |
-| `velocity_window` | 0.3 s | Smoother but more delayed velocity. |
+| `velocity_window` | 0.3 s | Smoother but more delayed velocity; also sets the lowest FPS (about 1 / (2 window)) at which velocity exists. |
 | `height_window` | 2.0 s | Reference height remembers the standing height for longer. |
 | `lying_angle` | 60° | Requires a more horizontal torso to count as lying. |
 | `lying_aspect` | 1.2 | Requires a wider box to count as lying (by box alone). |

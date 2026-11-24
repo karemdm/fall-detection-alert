@@ -175,8 +175,34 @@ def test_velocity_needs_enough_frames_per_window():
     """Frames further apart than velocity_window leave one sample in the window: no velocity."""
     h = MotionHistory(FallConfig(velocity_window=0.3))
     for i in range(5):
-        h.update(i * 0.4, PoseFeatures(0.0, 0.3, 100.0 + 50.0 * i, 400.0))
-        assert h.velocity() is None
+        h.update(i * 1.0, PoseFeatures(0.0, 0.3, 100.0 + 50.0 * i, 400.0))
+        assert h.velocity() is None  # anchor older than twice the window is not used
+
+
+def test_velocity_is_available_at_low_fps_through_the_anchor_sample():
+    h = MotionHistory(FallConfig(velocity_window=0.3))
+    h.update(0.0, PoseFeatures(0.0, 0.3, 100.0, 400.0))
+    assert h.velocity() is None
+    h.update(0.4, PoseFeatures(0.0, 0.3, 180.0, 400.0))  # 0.4 s apart: 2.5 FPS, window holds one sample
+    assert math.isclose(h.velocity(), (80.0 / 0.4) / 400.0)
+    h.update(0.8, PoseFeatures(0.0, 0.3, 260.0, 400.0))
+    assert math.isclose(h.velocity(), (80.0 / 0.4) / 400.0)
+
+
+def test_velocity_is_robust_to_one_outlier_sample():
+    h = MotionHistory(FallConfig(velocity_window=0.3))
+    ys = [100.0, 110.0, 120.0, 330.0, 140.0, 150.0]  # one keypoint glitch at index 3
+    for i, y in enumerate(ys):
+        h.update(i * 0.05, PoseFeatures(0.0, 0.3, y, 400.0))
+    # endpoints alone would give (150 - 100) / 0.25 / 400 = 0.5; the glitch must not matter much
+    assert math.isclose(h.velocity(), (10.0 / 0.05) / 400.0, rel_tol=0.1)
+
+
+def test_velocity_is_the_median_of_pairwise_slopes():
+    h = MotionHistory(FallConfig(velocity_window=0.3))
+    for i, y in enumerate([0.0, 10.0, 20.0, 30.0]):
+        h.update(i * 0.1, PoseFeatures(0.0, 0.3, y, 100.0))
+    assert math.isclose(h.velocity(), 100.0 / 100.0)
 
 
 def test_velocity_ignores_frames_without_hips():

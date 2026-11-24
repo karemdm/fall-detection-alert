@@ -24,6 +24,7 @@ the real onset of the fall; the ``falling_timeout`` counts from the latest entry
 from __future__ import annotations
 
 from collections import deque
+import statistics
 from typing import Deque, Optional, Tuple
 
 from fall_alert.config import FallConfig
@@ -65,7 +66,9 @@ class MotionHistory:
         if f.hip_y is not None:
             self._hips.append((t, f.hip_y))
         self._heights.append((t, f.box_height))
-        while self._hips and t - self._hips[0][0] > self.cfg.velocity_window:
+        # keep the last sample before the window as an anchor, so a slow video (one frame per
+        # window) still has two samples; drop the oldest only when the next one is also outside
+        while len(self._hips) >= 2 and t - self._hips[1][0] > self.cfg.velocity_window:
             self._hips.popleft()
         while self._heights and t - self._heights[0][0] > self.cfg.height_window:
             self._heights.popleft()
@@ -77,18 +80,31 @@ class MotionHistory:
     def velocity(self) -> Optional[float]:
         """Downward hip velocity in reference heights per second (``None`` if unknown).
 
-        Uses the oldest and the newest hip sample inside ``velocity_window`` (no smoothing) and
-        needs them to span at least half of the window, so a video slower than about
-        ``1 / velocity_window`` frames per second never produces a velocity.
+        The slope of the hip height is the median of all pairwise slopes (Theil-Sen) of the
+        samples inside ``velocity_window`` plus one anchor sample just before the window (used only
+        if it is at most twice the window before the newest sample), so a single noisy keypoint
+        frame does not decide the value. The samples must span at least half of the window. The
+        anchor makes the value available down to about ``1 / (2 * velocity_window)`` frames per
+        second (about 1.7 FPS for the default 0.3 s window).
         """
-        if len(self._hips) < 2:
+        samples = list(self._hips)
+        if len(samples) >= 2 and samples[-1][0] - samples[0][0] > 2.0 * self.cfg.velocity_window:
+            samples = samples[1:]
+        if len(samples) < 2:
             return None
-        (t0, y0), (t1, y1) = self._hips[0], self._hips[-1]
         ref = self.reference_height()
-        dt = t1 - t0
+        dt = samples[-1][0] - samples[0][0]
         if dt <= 0 or dt < 0.5 * self.cfg.velocity_window or ref <= 0:
             return None
-        return (y1 - y0) / dt / ref
+        slopes = [
+            (y1 - y0) / (t1 - t0)
+            for i, (t0, y0) in enumerate(samples)
+            for t1, y1 in samples[i + 1:]
+            if t1 > t0
+        ]
+        if not slopes:
+            return None
+        return statistics.median(slopes) / ref
 
 
 class FallStateMachine:
