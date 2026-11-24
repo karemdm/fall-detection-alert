@@ -70,10 +70,12 @@ def test_active_alerts_hide_tracks_not_on_screen():
     run(m, 1.0, 3.5, {1: LYING})
     assert len(m.active_alerts()) == 1
     # the person leaves the frame: the event stays open until lost_seconds, but is not shown
-    m.update(4.0, {})
+    m.update(4.6, {})
     assert len(m.active_alerts()) == 1
-    assert m.active_alerts(4.0, cfg.lying_gap) == []
-    assert len(m.active_alerts(3.5, cfg.lying_gap)) == 1
+    assert m.active_alerts(4.6, cfg.banner_hold) == []
+    assert len(m.active_alerts(3.4, cfg.banner_hold)) == 1
+    # still shown within banner_hold of the last observation
+    assert len(m.active_alerts(4.4, cfg.banner_hold)) == 1
 def run_at(monitor, start, end, observations, positions):
     out = {}
     n = int(round((end - start) / DT))

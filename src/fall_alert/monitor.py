@@ -158,7 +158,7 @@ class FallMonitor:
 
         Args:
             t: Current video time; needed with ``max_age``.
-            max_age: If given, only alerts whose track was seen within the last ``max_age`` seconds
+            max_age: If given (the pipeline passes ``banner_hold``), only alerts whose track was seen within the last ``max_age`` seconds
                 (an alert stays open in the event log until the track is lost for ``lost_seconds``,
                 but its person is no longer on screen, so it should not be shown).
         """

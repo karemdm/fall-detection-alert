@@ -46,3 +46,12 @@ def test_main_exits_with_status_2_on_invalid_values():
             code = exc.code
     assert code == 2
     assert "fallen_seconds" in err.getvalue()
+
+
+def test_banner_hold_flag_defaults_and_validates():
+    args = ["-i", "a.mp4", "-o", "b.mp4", "--no-display"]
+    assert config_from_args(build_parser().parse_args(args)).fall.banner_hold == 1.0
+    cfg = config_from_args(build_parser().parse_args(args + ["--banner-hold", "2.5"]))
+    assert cfg.fall.banner_hold == 2.5 and cfg.validate() == []
+    bad = config_from_args(build_parser().parse_args(args + ["--banner-hold", "-1"]))
+    assert "banner_hold" in " | ".join(bad.validate())

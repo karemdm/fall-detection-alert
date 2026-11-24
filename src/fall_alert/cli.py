@@ -28,6 +28,7 @@ THRESHOLD_HELP = {
     "falling_timeout": "Seconds in FALLING without lying before returning to UPRIGHT",
     "recover_seconds": "Seconds of upright posture that end ALERT",
     "lost_seconds": "Seconds without detection after which a track is dropped",
+    "banner_hold": "Seconds an open alert stays in the video banner after its person was last seen (display only)",
     "min_pose_keypoints": "A track can fall only after one frame with at least this many confident keypoints (rejects objects detected as a person); 0 disables",
     "stitch_distance": "New track within this many body heights of a recently lost non-UPRIGHT one continues its state and alert (id-switch repair); 0 disables",
 }
