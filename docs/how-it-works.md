@@ -9,7 +9,7 @@ explained from the logged features (`--trace-csv`).
 flowchart TD
     A["Video frame (time t)"] --> B["YOLO11n-pose + ByteTrack<br/>box + 17 COCO keypoints per track id"]
     B --> C["Keypoint gating<br/>shoulders / hips with conf ≥ 0.5"]
-    C --> D["Torso angle θ from vertical<br/>shoulder-mid → hip-mid"]
+    C --> D["Torso angle θ from vertical<br/>same-side shoulder → hip, averaged"]
     C --> E["Hip-mid height y_hip"]
     B --> F["Box aspect ratio w / h<br/>reference height H = max box height over 2 s"]
     E --> G["Hip velocity v = Δy_hip / Δt / H<br/>over 0.3 s"]
@@ -36,18 +36,22 @@ The pose skeleton is drawn only with `--draw-skeleton`.
 ## 2. Features (`features.py`, standard library only)
 
 **Keypoint gating.** A shoulder or hip is used only if its confidence is at least
-`min_kp_conf` (0.5). The shoulder midpoint `S` is the mean of the visible shoulders
-(one is enough); the same for the hip midpoint `P`.
+`min_kp_conf` (0.5). The hip midpoint `P` (mean of the visible hips, one is enough) gives the hip height used
+for velocity. The torso angle uses same-side pairs only: left shoulder with left hip, right shoulder with right hip.
 
 **Torso angle** from the downward vertical (image y grows downward):
 
 ```
-θ = atan2(|P.x − S.x|, P.y − S.y)        in degrees, 0..180
+θ_side = atan2(|hip.x − shoulder.x|, hip.y − shoulder.y)        in degrees, 0..180
+θ = mean of θ_left and θ_right (those whose two points pass the gate)
 ```
 
 0° is upright, 90° horizontal, values above 90° mean the hips are above the
-shoulders (e.g. lying with the head lower than the hips). If no shoulder or no hip
-passes the gate, `θ` is undefined and only the aspect ratio is used.
+shoulders (e.g. lying with the head lower than the hips). If neither side has both its
+shoulder and its hip above the gate, `θ` is undefined and only the aspect ratio is used. A
+shoulder and a hip of opposite sides are deliberately not paired: on a turned or lying
+body the diagonal includes the body width (about 35° for an upright person) and skews
+the angle.
 
 **Aspect ratio** `r = (x2 − x1) / (y2 − y1)` of the person box.
 

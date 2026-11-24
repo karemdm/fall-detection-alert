@@ -2,7 +2,7 @@
 
 Rule-based fall detection on Ultralytics YOLO pose keypoints with multi-person tracking, no training required.
 
-Each tracked person gets a torso angle (shoulder midpoint to hip midpoint, measured from vertical), a box aspect
+Each tracked person gets a torso angle (shoulder to hip of the same side, averaged over both sides, measured from vertical), a box aspect
 ratio and a normalized downward hip velocity. A small per-track state machine (`UPRIGHT → FALLING → FALLEN → ALERT`)
 turns those features into an alert once a lying posture is held for a configurable time. The output is an annotated
 video and, optionally, a JSON list of alert events.
@@ -326,8 +326,9 @@ python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('
   it is never available and only the angle and box rules can start `FALLING`.
 - **Person cut by the image border.** A box clipped by the frame edge changes the aspect ratio and the reference
   height, and hidden hips/shoulders disable the angle; a partly visible person can look wider or shorter than they are.
-- With only one shoulder and one hip visible on opposite sides, the torso angle includes the body width (about
-  35° for an upright person), so such frames count neither as upright nor as lying by the angle.
+- The torso angle uses only same-side shoulder/hip pairs (left-left, right-right; averaged when both are visible). With
+  only a shoulder and a hip on opposite sides visible, the angle would include the body width (about 35° for an
+  upright person), so it is left undefined for that frame and only the aspect ratio is used.
 
 ## Models & credits
 

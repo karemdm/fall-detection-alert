@@ -46,7 +46,7 @@ def test_aspect_ratio():
 
 
 def test_compute_features_standing():
-    kps = make_keypoints(((40, 20), (60, 20)), ((42, 60), (58, 60)))
+    kps = make_keypoints(((40, 20), (60, 20)), ((40, 60), (60, 60)))
     f = compute_features(kps, (30, 0, 70, 120), 0.5)
     assert math.isclose(f.torso_angle, 0.0, abs_tol=1e-9)
     assert math.isclose(f.aspect_ratio, 40 / 120)
@@ -90,12 +90,40 @@ def test_torso_angle_ignores_the_side_of_the_lean():
     assert math.isclose(left.torso_angle, right.torso_angle) and math.isclose(left.torso_angle, 45.0)
 
 
-def test_single_visible_shoulder_and_hip_are_enough_for_an_angle():
+def test_single_same_side_pair_is_enough_for_an_angle():
+    kps = [(0.0, 0.0, 0.0)] * 17
+    kps[LEFT_SHOULDER] = (50.0, 20.0, 0.9)
+    kps[LEFT_HIP] = (50.0, 60.0, 0.9)
+    f = compute_features(kps, (30, 0, 70, 120), 0.5)
+    assert math.isclose(f.torso_angle, 0.0, abs_tol=1e-9) and f.hip_y == 60.0
+
+
+def test_cross_side_shoulder_and_hip_give_no_angle():
     kps = [(0.0, 0.0, 0.0)] * 17
     kps[LEFT_SHOULDER] = (50.0, 20.0, 0.9)
     kps[RIGHT_HIP] = (50.0, 60.0, 0.9)
     f = compute_features(kps, (30, 0, 70, 120), 0.5)
-    assert math.isclose(f.torso_angle, 0.0, abs_tol=1e-9) and f.hip_y == 60.0
+    assert f.torso_angle is None and f.hip_y == 60.0
+
+
+def test_both_sides_are_averaged_not_mixed_across_the_body():
+    # upright person seen from the front with a wide body: same-side pairs are vertical (0 deg),
+    # while the old shoulder-mid -> hip-mid on a lying body would mix sides
+    kps = make_keypoints(((40, 20), (80, 20)), ((40, 60), (80, 60)))
+    assert math.isclose(compute_features(kps, (30, 0, 90, 120), 0.5).torso_angle, 0.0, abs_tol=1e-9)
+    # left pair leans 45 deg, right pair is vertical: average 22.5
+    kps = make_keypoints(((40, 20), (80, 20)), ((80, 60), (80, 60)))
+    kps[LEFT_HIP] = (80.0, 60.0, 0.9)
+    kps[LEFT_SHOULDER] = (40.0, 20.0, 0.9)
+    assert math.isclose(compute_features(kps, (30, 0, 90, 120), 0.5).torso_angle, 22.5)
+
+
+def test_one_good_side_is_used_when_the_other_side_is_cross_only():
+    kps = [(0.0, 0.0, 0.0)] * 17
+    kps[LEFT_SHOULDER] = (40.0, 20.0, 0.9)
+    kps[LEFT_HIP] = (40.0, 60.0, 0.9)
+    kps[RIGHT_SHOULDER] = (60.0, 20.0, 0.9)  # right hip missing: right pair unusable
+    assert math.isclose(compute_features(kps, (30, 0, 70, 120), 0.5).torso_angle, 0.0, abs_tol=1e-9)
 
 
 def test_only_hips_visible_gives_hip_height_but_no_angle():
