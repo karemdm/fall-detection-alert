@@ -1,4 +1,12 @@
 {
   "input": "snow-pexels-20595440.mp4",
-  "events": []
+  "events": [
+    {
+      "track_id": 2,
+      "fall_start": 3.333,
+      "start": 4.417,
+      "end": 4.533,
+      "end_reason": "end_of_video"
+    }
+  ]
 }
