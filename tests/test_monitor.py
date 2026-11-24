@@ -194,7 +194,7 @@ def test_upright_newcomer_next_to_lost_fallen_track_is_not_stitched():
     assert m.stitched == []
 
 
-def test_newcomer_that_is_not_clearly_upright_is_stitched():
+def test_newcomer_that_is_tilted_or_wide_is_stitched():
     bent = PoseFeatures(torso_angle=45.0, aspect_ratio=0.5, hip_y=600.0, box_height=300.0)
     wide_no_angle = PoseFeatures(torso_angle=None, aspect_ratio=0.9, hip_y=None, box_height=300.0)
     narrow_no_angle = PoseFeatures(torso_angle=None, aspect_ratio=0.35, hip_y=None, box_height=500.0)
@@ -287,3 +287,34 @@ def test_active_alerts_max_age_needs_a_time():
     run(m, 1.0, 3.0, {1: LYING})
     assert len(m.active_alerts(max_age=0.3)) == 1
     assert len(m.active_alerts(t=2.95, max_age=0.3)) == 1
+
+
+def _stitched_with(newcomer):
+    m = FallMonitor(FallConfig())
+    fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.5)
+    run_at(m, 2.7, 2.8, {2: newcomer}, {2: (320.0, 620.0)})
+    return bool(m.stitched)
+
+
+def test_narrow_newcomer_below_falling_angle_is_not_stitched_onto_lost_alert():
+    standing_38 = PoseFeatures(torso_angle=38.9, aspect_ratio=0.48, hip_y=300.0, box_height=500.0)
+    assert not _stitched_with(standing_38)
+
+
+def test_tilted_newcomer_at_or_above_falling_angle_is_stitched():
+    tilted = PoseFeatures(torso_angle=50.0, aspect_ratio=0.5, hip_y=600.0, box_height=300.0)
+    assert _stitched_with(tilted)
+
+
+def test_wide_newcomer_with_small_angle_is_stitched():
+    wide = PoseFeatures(torso_angle=10.0, aspect_ratio=0.9, hip_y=600.0, box_height=300.0)
+    assert _stitched_with(wide)
+
+
+def test_clearly_upright_newcomer_is_still_not_stitched():
+    assert not _stitched_with(STANDING)
+
+
+def test_narrow_newcomer_without_angle_is_not_stitched():
+    no_angle = PoseFeatures(torso_angle=None, aspect_ratio=0.48, hip_y=None, box_height=500.0)
+    assert not _stitched_with(no_angle)

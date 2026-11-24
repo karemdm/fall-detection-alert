@@ -8,7 +8,21 @@ from typing import Dict, Hashable, List, Mapping, Optional, Tuple
 
 from fall_alert.config import FallConfig
 from fall_alert.features import PoseFeatures
-from fall_alert.state_machine import ALERT, UPRIGHT, FallStateMachine, is_upright
+from fall_alert.state_machine import ALERT, UPRIGHT, FallStateMachine
+
+
+def _is_stitch_newcomer_other_person(f: PoseFeatures, cfg: FallConfig) -> bool:
+    """True when a new track is narrow and below the falling angle, so it is not a stitch candidate.
+
+    A stitch repairs a box that changes shape in the middle of a fall, so the newcomer is expected
+    to be tilted (torso angle at or above ``falling_angle``) or wide (aspect above
+    ``upright_aspect``). A narrow newcomer below the falling angle is a different person: after a
+    hard cut in a compilation, a standing person at 38.9 degrees and aspect 0.48 inherited the
+    previous person's open ``ALERT``, and the next fall got no event of its own. A missing angle
+    counts as not tilted.
+    """
+    not_tilted = f.torso_angle is None or f.torso_angle < cfg.falling_angle
+    return f.aspect_ratio <= cfg.upright_aspect and not_tilted
 
 
 @dataclass
@@ -115,17 +129,17 @@ class FallMonitor:
         divided by the larger of the old reference height and the new box height (at least 1 px)
         and must not exceed ``stitch_distance``.
 
-        The new track must also not be clearly upright at its first observation (see
-        :func:`~fall_alert.state_machine.is_upright`: torso angle above ``upright_angle`` or box
-        aspect above ``upright_aspect``, or no angle and a wide box). A person who is upright next
-        to a lost ``FALLEN``/``ALERT`` track is someone else, not the fallen person. Without a
-        stitch the old alert closes as ``lost`` after ``lost_seconds`` and the new track starts
-        unarmed in ``UPRIGHT``.
+        The new track must also be tilted or wide at its first observation (see
+        :func:`_is_stitch_newcomer_other_person`: torso angle at or above ``falling_angle`` or box
+        aspect above ``upright_aspect``; a missing angle counts as not tilted). A narrow newcomer
+        below the falling angle next to a lost ``FALLEN``/``ALERT`` track is someone else, not the
+        fallen person. Without a stitch the old alert closes as ``lost`` after ``lost_seconds`` and
+        the new track starts unarmed in ``UPRIGHT``.
 
         Returns:
             The taken-over state machine, or ``None`` if no track qualifies.
         """
-        if self.cfg.stitch_distance <= 0 or is_upright(f, self.cfg):
+        if self.cfg.stitch_distance <= 0 or _is_stitch_newcomer_other_person(f, self.cfg):
             return None
         best, best_d = None, None
         for old_id, seen in self._last_seen.items():
