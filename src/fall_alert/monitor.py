@@ -8,7 +8,7 @@ from typing import Dict, Hashable, List, Mapping, Optional, Tuple
 
 from fall_alert.config import FallConfig
 from fall_alert.features import PoseFeatures
-from fall_alert.state_machine import ALERT, FallStateMachine
+from fall_alert.state_machine import ALERT, UPRIGHT, FallStateMachine
 
 
 @dataclass
@@ -108,9 +108,17 @@ class FallMonitor:
     def _stitch(self, t, track_id, f, pos, observations) -> Optional[FallStateMachine]:
         """Moves the nearest recently lost track (state machine and open alert) to ``track_id``.
 
-        Candidates are tracks not observed in this frame and last seen less than ``lost_seconds``
-        ago. The distance between box centers is divided by the larger of the old reference height
-        and the new box height (at least 1 px) and must not exceed ``stitch_distance``.
+        Candidates are tracks not observed in this frame, last seen less than ``lost_seconds``
+        ago, and not ``UPRIGHT`` when last seen (``FALLING``, ``FALLEN`` or ``ALERT``): the repair
+        is for the box changing shape during a fall, so a new track near a lost upright person is
+        treated as a new person and starts in ``UPRIGHT``. The distance between box centers is
+        divided by the larger of the old reference height and the new box height (at least 1 px)
+        and must not exceed ``stitch_distance``.
+
+        The new track inherits the state of the old one regardless of its own posture (an upright
+        newcomer next to a lost ``ALERT`` track continues the alert until the upright timer ends
+        it as ``recovered``). Without a stitch, the old alert closes as ``lost`` after
+        ``lost_seconds`` and the new track starts unarmed in ``UPRIGHT``.
 
         Returns:
             The taken-over state machine, or ``None`` if no track qualifies.
@@ -120,6 +128,8 @@ class FallMonitor:
         best, best_d = None, None
         for old_id, seen in self._last_seen.items():
             if old_id in observations or seen >= t or t - seen > self.cfg.lost_seconds or old_id not in self._last_pos:
+                continue
+            if self._machines[old_id].state == UPRIGHT:
                 continue
             ref = max(self._machines[old_id].motion.reference_height(), f.box_height, 1.0)
             (x0, y0), (x1, y1) = self._last_pos[old_id], pos

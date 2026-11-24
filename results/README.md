@@ -6,6 +6,8 @@ Annotated videos produced by this project, re-encoded to H.264 720p without audi
   ByteTrack, default `FallConfig`; upright tracks with an `n/a` torso angle are not drawn).
 - **Single clips** (below): produced with the previous default `--conf 0.35`, `imgsz=640`, before the `n/a` boxes
   were hidden; re-running them with the current defaults can give slightly different times.
+- **Id-switch repair:** all results in this folder were produced before id-switch repair was limited to tracks lost
+  while not `UPRIGHT`; re-running can change events where a new track appeared near a lost one.
 
 - `gmdcsa24-s1-fall-05_alert.mp4` + `gmdcsa24-s1-fall-05_events.json`: walking, then a forward fall to hands and
   knees and lying on the floor.

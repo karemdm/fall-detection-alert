@@ -14,7 +14,7 @@ flowchart TD
     B --> F["Box aspect ratio w / h<br/>reference height H = max box height over 2 s"]
     E --> G["Hip velocity v = Δy_hip / Δt / H<br/>over 0.3 s"]
     F --> G
-    D --> R["Id-switch repair<br/>(which track's state machine gets the frame)"]
+    D --> R["Id-switch repair<br/>(only for lost tracks that were not UPRIGHT)<br/>which track's state machine gets the frame"]
     F --> R
     G --> R
     R --> H["Per-track state machine<br/>UPRIGHT → FALLING → FALLEN → ALERT"]
@@ -100,9 +100,17 @@ flowchart TD
   person (bins, coats, shadows) rarely show a body pose, so they never fall.
 - Id-switch repair: when a new track id appears within `stitch_distance` (1.0 body
   heights) of a track lost less than `lost_seconds` ago, it takes over that track's
-  state machine and open alert. During a fall the box goes from tall to wide and
-  trackers often start a new id; without the repair the 1.0 s confirmation would
-  restart. Other new ids start their own state machine in `UPRIGHT`.
+  state machine and open alert. Only tracks that were `FALLING`, `FALLEN` or `ALERT`
+  when last seen are candidates: during a fall the box goes from tall to wide and
+  trackers often start a new id, and without the repair the 1.0 s confirmation would
+  restart. A track lost while `UPRIGHT` is never stitched, so a new person walking in
+  near it starts a new state machine in `UPRIGHT` (unarmed until one frame with enough
+  keypoints). The stitched track keeps the old machine as is (including `armed`), and
+  the open alert moves with it, still one event. If the newcomer is upright, the
+  inherited `ALERT` ends as `recovered` once it has been upright for `recover_seconds`;
+  if nothing stitches, the alert closes as `lost` at the last time the old track was seen.
+  Results published before this rule was added were produced with the older, broader
+  stitching and may differ.
 - A single frame can pass several transitions: a lying posture seen in `UPRIGHT`
   goes straight to `FALLEN` (via `FALLING`).
 - The upright timer for recovery counts consecutive upright frames; any
@@ -138,7 +146,7 @@ flowchart TD
 | `recover_seconds` | 2.0 s | The person must stand longer before the alert ends. |
 | `lost_seconds` | 2.0 s | Tracks survive longer occlusions. |
 | `min_pose_keypoints` | 6 | Stricter filter against objects detected as a person; a person seen only partly may never be armed. |
-| `stitch_distance` | 1.0 body heights | Repairs id switches further away, with more risk of merging two nearby people. |
+| `stitch_distance` | 1.0 body heights | Repairs id switches further away, with more risk of merging two nearby people (only tracks lost while not `UPRIGHT` are candidates). |
 
 Tips:
 
