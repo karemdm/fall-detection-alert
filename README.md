@@ -91,7 +91,7 @@ The pose models run on CPU. For a GPU, install the PyTorch build matching your C
 [`samples/fall_mix_input.mp4`](samples/README.md#fall-mix-fall_mix_inputmp4): eight GMDCSA24 falls of three subjects
 (day and night, side, forward and backward falls) followed by the Pexels snow fall, cut to ~2 s before each
 labelled fall and joined without transitions. Default fall thresholds; colors: green `UPRIGHT`, orange `FALLING`, red `FALLEN` / `ALERT`. Hit = `ALERT` starts within the labelled fall window + 2 s. **Alert delay** = `ALERT` time minus the labelled fall onset of
-the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-1.9 s).
+the segment (not minus the detector's `fall_start` in the events JSON, which is later; `start - fall_start` there is 1.0-1.9 s in the published run; `fall_start` is now the first entry into `FALLING` of the episode and is not moved by a `FALLEN` to `FALLING` drop, so it can be earlier in new runs).
 
 | Run | Hits | Misses | False alerts | Alert delay after labelled fall start |
 |---|---|---|---|---|
@@ -250,7 +250,7 @@ fine for private testing but should not be committed.
    "events": [{"track_id": 1, "fall_start": 2.272, "start": 3.312, "end": 5.824, "end_reason": "end_of_video"}]}
   ```
 
-  `input` is the input file name. `fall_start` is the `FALLING` entry time, `start`/`end` bound the `ALERT` state, `end_reason` is `recovered`,
+  `input` is the input file name. `fall_start` is the first `FALLING` entry time of the fall episode, `start`/`end` bound the `ALERT` state, `end_reason` is `recovered`,
   `lost` or `end_of_video`. Times are seconds of video time.
 - **Trace CSV** (`--trace-csv`): one row per track and frame with the columns `time, track_id, state, torso_angle,
   aspect_ratio, velocity, box_height` (time in seconds with 3 decimals, `box_height` in pixels; `torso_angle` and

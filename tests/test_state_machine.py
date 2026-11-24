@@ -213,15 +213,36 @@ def test_interrupted_upright_does_not_recover():
     assert feed(m, 6.0, 7.0, STANDING)[-1] == UPRIGHT
 
 
-def test_fall_start_moves_when_fallen_drops_back_to_falling():
+def test_fall_start_is_kept_when_fallen_drops_back_to_falling():
     m = FallStateMachine(FallConfig(lying_gap=0.3))
     feed(m, 0.0, 1.0, STANDING)
     feed(m, 1.0, 1.5, LYING)
     assert m.fall_start == 1.0
     feed(m, 1.5, 2.0, BENT)
-    assert m.state == FALLING and m.fall_start > 1.5
+    assert m.state == FALLING and m.fall_start == 1.0
     feed(m, 2.0, 4.0, LYING)
-    assert m.state == ALERT and m.fall_start > 1.5
+    assert m.state == ALERT and m.fall_start == 1.0
+
+
+def test_falling_timeout_counts_from_the_latest_entry_after_a_drop_back():
+    m = FallStateMachine(FallConfig(lying_gap=0.3, falling_timeout=2.0))
+    feed(m, 0.0, 1.0, STANDING)
+    feed(m, 1.0, 1.5, LYING)
+    feed(m, 1.5, 3.0, BENT)  # FALLING again from ~1.9 s; 2.0 s timeout not yet reached at 3.0 s
+    assert m.state == FALLING and m.fall_start == 1.0
+    feed(m, 3.0, 4.5, STANDING)
+    assert m.state == UPRIGHT and m.fall_start is None
+
+
+def test_new_episode_after_upright_gets_a_new_fall_start():
+    m = FallStateMachine(FallConfig())
+    feed(m, 0.0, 1.0, STANDING)
+    feed(m, 1.0, 3.0, LYING)
+    feed(m, 3.0, 6.0, STANDING)
+    assert m.state == UPRIGHT
+    feed(m, 6.0, 7.0, STANDING)
+    feed(m, 7.0, 7.5, LYING)
+    assert m.fall_start == 7.0
 
 
 def test_upside_down_torso_counts_as_lying():

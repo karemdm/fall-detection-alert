@@ -17,7 +17,7 @@ class AlertEvent:
 
     Attributes:
         track_id: Tracker id of the person.
-        fall_start: Time (s) the track entered ``FALLING``.
+        fall_start: Time (s) the track first entered ``FALLING`` in this fall episode.
         start: Time (s) the track entered ``ALERT``.
         end: Time (s) the alert ended (recovery, track lost or end of video); ``None`` while open.
         end_reason: ``"recovered"``, ``"lost"`` or ``"end_of_video"``.

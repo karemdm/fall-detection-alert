@@ -15,6 +15,10 @@ States::
 A track can leave ``UPRIGHT`` only after it has been "armed" by one frame with at
 least ``min_pose_keypoints`` confident keypoints. Objects detected as a person
 (bins, coats, shadows) rarely show a body pose, so they cannot raise alerts.
+
+``fall_start`` is the time of the first entry into ``FALLING`` of an episode (an episode ends when
+the track is back in ``UPRIGHT``). A ``FALLEN -> FALLING`` drop does not move it, so it keeps
+the real onset of the fall; the ``falling_timeout`` counts from the latest entry into ``FALLING``.
 """
 
 from __future__ import annotations
@@ -99,7 +103,8 @@ class FallStateMachine:
         self.state = UPRIGHT
         self.motion = MotionHistory(cfg)
         self.velocity: Optional[float] = None
-        self.fall_start: Optional[float] = None
+        self.fall_start: Optional[float] = None  # first entry into FALLING of this episode
+        self._falling_since: Optional[float] = None  # latest entry into FALLING (timeout)
         self._lying_since: Optional[float] = None
         self._last_lying: Optional[float] = None
         self._upright_since: Optional[float] = None
@@ -133,19 +138,20 @@ class FallStateMachine:
             fast = self.velocity is not None and self.velocity >= cfg.fall_velocity
             tilted = f.torso_angle is not None and f.torso_angle >= cfg.falling_angle
             if self.armed and (fast or tilted or lying):
-                self.state, self.fall_start = FALLING, t
+                self.state, self.fall_start, self._falling_since = FALLING, t, t
         if self.state == FALLING:
             if lying:
                 self.state, self._lying_since = FALLEN, t
-            elif t - self.fall_start >= cfg.falling_timeout:
+            elif t - self._falling_since >= cfg.falling_timeout:
                 self.state = UPRIGHT
         elif self.state == ALERT and upright_held:
             self.state = UPRIGHT
         elif self.state == FALLEN:
             if not lying and t - self._last_lying > cfg.lying_gap:
-                self.state, self.fall_start = FALLING, t
+                # fall_start is kept: it is the start of the whole fall episode
+                self.state, self._falling_since = FALLING, t
         if self.state == FALLEN and t - self._lying_since >= cfg.fallen_seconds:
             self.state = ALERT
         if self.state == UPRIGHT:
-            self.fall_start = self._lying_since = None
+            self.fall_start = self._falling_since = self._lying_since = None
         return self.state

@@ -97,8 +97,11 @@ flowchart TD
 
 `ALERT` is left only through the upright timer: a person who sits up (neither lying nor upright) keeps the alert open.
 
-- `fall_start` is the time of the latest entry into `FALLING` and is reported with
-  the alert. It is set on `UPRIGHT → FALLING` and set again on `FALLEN → FALLING`.
+- `fall_start` is the time of the first entry into `FALLING` of the fall episode and is
+  reported with the alert. It is set on `UPRIGHT → FALLING` and kept on `FALLEN → FALLING`
+  (a person who shifts on the floor and drops out of lying keeps the original onset);
+  a new value is only set after the track went back to `UPRIGHT`. The `falling_timeout`
+  still counts from the latest entry into `FALLING`.
 - A track leaves `UPRIGHT` only once it is *armed*: one frame with at least
   `min_pose_keypoints` (6) keypoints above `min_kp_conf`. Objects detected as a
   person (bins, coats, shadows) rarely show a body pose, so they never fall.
