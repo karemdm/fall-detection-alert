@@ -23,9 +23,10 @@ FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
 def draw_skeleton(frame: np.ndarray, keypoints: Sequence[Keypoint], min_conf: float, thickness: int) -> None:
-    """Draws the COCO skeleton, skipping keypoints below ``min_conf``."""
+    """Draws the COCO skeleton, skipping keypoints below ``min_conf`` (and missing ones)."""
+    n = len(keypoints)
     for a, b in SKELETON:
-        if keypoints[a][2] >= min_conf and keypoints[b][2] >= min_conf:
+        if a < n and b < n and keypoints[a][2] >= min_conf and keypoints[b][2] >= min_conf:
             pa = (int(keypoints[a][0]), int(keypoints[a][1]))
             pb = (int(keypoints[b][0]), int(keypoints[b][1]))
             cv2.line(frame, pa, pb, SKELETON_COLOR, thickness, cv2.LINE_AA)
