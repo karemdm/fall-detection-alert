@@ -21,8 +21,9 @@ Annotated results on every clip: [Results](#results).*
 - Per-track state machine with recovery (`ALERT` ends after the person is upright for a while).
 - Object filter: a track can only fall after it showed a body pose (at least 6 confident keypoints) in one frame,
   so bins, coats and shadows detected as a person do not raise alerts.
-- Id-switch repair: when the tracker gives a fallen person a new id, the new track continues the old one's state
-  and alert if it starts close to where the old one was lost.
+- Id-switch repair: when the tracker gives a person who is falling or has fallen a new id, the new track continues the
+  old one's state and alert if it starts close to where the old one was lost. Tracks lost while `UPRIGHT` are never
+  stitched, so a new person walking in near a lost one starts fresh.
 - Annotated MP4 at the input FPS: box colored by state, `state | angle` label, alert banner with time (pose skeleton optional with `--draw-skeleton`).
 - `--events-json` export (track id, fall start, alert start/end, end reason) and `--trace-csv` per-frame features.
 - All thresholds in one dataclass and on the CLI; pure logic is standard-library only and unit tested.
@@ -36,7 +37,7 @@ flowchart TD
     B --> F["Box aspect ratio w / h"]
     C --> D["Torso angle θ from vertical"]
     C --> E["Hip velocity v<br/>body heights / s"]
-    D --> S["Id-switch repair<br/>a new id next to a recently lost track<br/>continues that track's state and alert"]
+    D --> S["Id-switch repair<br/>a new id next to a recently lost track<br/>that was FALLING, FALLEN or ALERT (not UPRIGHT)<br/>continues that track's state and alert"]
     E --> S
     F --> S
     S --> G{"UPRIGHT and armed<br/>(≥ 6 confident keypoints seen once):<br/>v ≥ 0.8 or θ ≥ 45° or lying?"}
@@ -227,7 +228,7 @@ fine for private testing but should not be committed.
 | `--recover-seconds` | `2.0` | Seconds of upright posture that end `ALERT`. |
 | `--lost-seconds` | `2.0` | Seconds without detection after which a track is dropped. |
 | `--min-pose-keypoints` | `6` | A track can fall only after one frame with at least this many keypoints above `--min-kp-conf`. Rejects objects detected as a person (bins, coats, shadows); `0` disables. |
-| `--stitch-distance` | `1.0` | A new track that starts within this many body heights of a track lost less than `--lost-seconds` ago continues its state and alert (repairs tracker id switches during a fall, when the box changes from tall to wide); `0` disables. |
+| `--stitch-distance` | `1.0` | A new track that starts within this many body heights of a track lost less than `--lost-seconds` ago continues its state and alert (repairs tracker id switches during a fall, when the box changes from tall to wide). Only tracks that were not `UPRIGHT` when lost are considered; `0` disables. |
 | `--log-level` | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
 | `--version` | — | Print the version and exit. |
 

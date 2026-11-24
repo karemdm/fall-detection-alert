@@ -3,7 +3,7 @@
 from fall_alert.config import FallConfig
 from fall_alert.features import PoseFeatures
 from fall_alert.monitor import FallMonitor
-from fall_alert.state_machine import ALERT, UPRIGHT
+from fall_alert.state_machine import ALERT, FALLEN, UPRIGHT
 
 STANDING = PoseFeatures(torso_angle=3.0, aspect_ratio=0.35, hip_y=300.0, box_height=500.0)
 LYING = PoseFeatures(torso_angle=88.0, aspect_ratio=2.5, hip_y=650.0, box_height=180.0)
@@ -114,21 +114,86 @@ def test_track_lost_longer_than_lost_seconds_is_not_stitched():
     assert m.stitched == []
 
 
+def fall_then_lose(monitor, tid, pos, fall_end=1.5):
+    """Track ``tid`` stands until 1.0 s, then lies (FALLING/FALLEN) until ``fall_end``."""
+    run_at(monitor, 0.0, 1.0, {tid: STANDING}, {tid: pos})
+    run_at(monitor, 1.0, fall_end, {tid: LYING}, {tid: pos})
+
+
 def test_stitch_picks_the_nearest_lost_track():
     m = FallMonitor(FallConfig())
     run_at(m, 0.0, 1.0, {1: STANDING, 2: STANDING}, {1: (100.0, 400.0), 2: (400.0, 400.0)})
-    run_at(m, 1.2, 1.5, {3: STANDING}, {3: (380.0, 400.0)})
+    run_at(m, 1.0, 1.5, {1: LYING, 2: LYING}, {1: (100.0, 400.0), 2: (400.0, 400.0)})
+    run_at(m, 1.7, 2.0, {3: LYING}, {3: (380.0, 400.0)})
     assert [s[:2] for s in m.stitched] == [(2, 3)]
 
 
 def test_stitch_distance_is_in_body_heights():
     cfg = FallConfig(stitch_distance=1.0)
-    # box height 500 px: 450 px away is 0.9 heights (stitched), 600 px is 1.2 heights (not)
+    # reference height 500 px: 450 px away is 0.9 heights (stitched), 600 px is 1.2 heights (not)
     near, far = FallMonitor(cfg), FallMonitor(cfg)
     for m, x in ((near, 750.0), (far, 900.0)):
-        run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
-        run_at(m, 1.2, 1.5, {2: STANDING}, {2: (x, 400.0)})
+        fall_then_lose(m, 1, (300.0, 400.0))
+        run_at(m, 1.7, 2.0, {2: LYING}, {2: (x, 400.0)})
     assert len(near.stitched) == 1 and far.stitched == []
+
+
+def test_lost_upright_track_is_not_stitched():
+    m = FallMonitor(FallConfig())
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+    out = run_at(m, 1.2, 1.5, {2: STANDING}, {2: (310.0, 400.0)})
+    assert m.stitched == []
+    assert out[2].state == UPRIGHT
+    # also when the newcomer is already lying: it starts its own machine
+    m = FallMonitor(FallConfig())
+    run_at(m, 0.0, 1.0, {1: STANDING}, {1: (300.0, 400.0)})
+    run_at(m, 1.2, 1.5, {2: LYING}, {2: (310.0, 400.0)})
+    assert m.stitched == []
+
+
+def test_lost_falling_or_fallen_track_is_stitched():
+    m = FallMonitor(FallConfig())
+    fall_then_lose(m, 1, (300.0, 600.0), fall_end=1.3)
+    assert m._machines[1].state != UPRIGHT
+    out = run_at(m, 1.5, 1.6, {2: LYING}, {2: (320.0, 620.0)})
+    assert [s[:2] for s in m.stitched] == [(1, 2)]
+    assert out[2].state != UPRIGHT
+    m = FallMonitor(FallConfig())
+    fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.0)
+    assert m._machines[1].state == FALLEN
+    run_at(m, 2.2, 2.3, {2: LYING}, {2: (320.0, 620.0)})
+    assert [s[:2] for s in m.stitched] == [(1, 2)]
+
+
+def test_lost_alert_track_is_stitched_to_a_new_track():
+    m = FallMonitor(FallConfig())
+    fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.5)
+    assert len(m.active_alerts()) == 1
+    out = run_at(m, 2.7, 3.0, {2: LYING}, {2: (320.0, 620.0)})
+    assert out[2].state == ALERT and len(m.events) == 1 and m.events[0].end is None
+
+
+def test_upright_newcomer_next_to_lost_alert_continues_it_until_recovered():
+    # documented behavior: the stitch rules only look at the lost track, so an upright newcomer
+    # inherits the ALERT state, which then ends as "recovered" after recover_seconds upright
+    m = FallMonitor(FallConfig())
+    fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.5)
+    out = run_at(m, 2.7, 3.0, {2: STANDING}, {2: (320.0, 620.0)})
+    assert [s[:2] for s in m.stitched] == [(1, 2)] and out[2].state == ALERT
+    run_at(m, 3.0, 5.5, {2: STANDING}, {2: (320.0, 620.0)})
+    assert len(m.events) == 1 and m.events[0].end_reason == "recovered"
+
+
+def test_open_alert_closes_as_lost_when_nothing_stitches():
+    m = FallMonitor(FallConfig(lost_seconds=1.0))
+    fall_then_lose(m, 1, (300.0, 600.0), fall_end=2.5)
+    # far-away newcomer and a nearby one only after the lost window: no stitch
+    run_at(m, 2.7, 3.0, {2: STANDING}, {2: (1500.0, 600.0)})
+    run_at(m, 3.0, 4.0, {2: STANDING}, {2: (1500.0, 600.0)})
+    assert m.stitched == []
+    assert len(m.events) == 1
+    assert m.events[0].end_reason == "lost" and abs(m.events[0].end - 2.4) < 1e-9
+    assert m.active_alerts() == []
 
 
 def test_track_still_observed_is_not_stitched_to_a_new_one():
