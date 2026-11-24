@@ -216,7 +216,7 @@ fine for private testing but should not be committed.
 | `--min-kp-conf` | `0.5` | Minimum keypoint confidence for shoulders/hips. |
 | `--falling-angle` | `45` | Torso angle from vertical (deg) that starts `FALLING`. |
 | `--fall-velocity` | `0.8` | Downward hip velocity (body heights/s) that starts `FALLING`. |
-| `--velocity-window` | `0.3` | Time span (s) of the hip velocity estimate. |
+| `--velocity-window` | `0.3` | Time span (s) of the hip velocity estimate (median of pairwise slopes, plus one sample before the window). |
 | `--height-window` | `2.0` | Time span (s) of the reference body height (max box height). |
 | `--lying-angle` | `60` | Torso angle (deg) at or above which the posture is lying. |
 | `--lying-aspect` | `1.2` | Box w/h at or above which the posture is lying. |
@@ -323,8 +323,9 @@ python -c "import sys, importlib; sys.path[:0]=['src','tests']; [f() for m in ('
 - Timestamps come from the container (`CAP_PROP_POS_MSEC`, held non-decreasing; `frame index / fps` if the container
   gives none, 30 FPS if it reports no frame rate); the output video is written at a constant FPS, so
   variable-frame-rate inputs can show small timing differences between the banner and the player clock.
-- **Low frame rates.** The hip velocity needs two hip samples within `--velocity-window` (0.3 s), so below about 3.4 FPS
-  it is never available and only the angle and box rules can start `FALLING`.
+- **Low frame rates.** The hip velocity is a median of pairwise slopes over `--velocity-window` (0.3 s) plus the last
+  sample before the window, so it exists down to about 1.7 FPS; below that it is never available and only the angle
+  and box rules can start `FALLING`.
 - **Person cut by the image border.** A box clipped by the frame edge changes the aspect ratio and the reference
   height, and hidden hips/shoulders disable the angle; a partly visible person can look wider or shorter than they are.
 - The torso angle uses only same-side shoulder/hip pairs (left-left, right-right; averaged when both are visible). With
