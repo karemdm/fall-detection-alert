@@ -118,7 +118,7 @@ def run(cfg: RunConfig) -> int:
                     f = st.features
                     trace.writerow([f"{t:.3f}", tid, st.state, _fmt(f.torso_angle), _fmt(f.aspect_ratio),
                                     _fmt(st.velocity), f"{f.box_height:.1f}"])
-            render(frame, persons, statuses, monitor.active_alerts(t, cfg.fall.lying_gap), t, cfg.fall.min_kp_conf,
+            render(frame, persons, statuses, monitor.active_alerts(t, cfg.fall.banner_hold), t, cfg.fall.min_kp_conf,
                    draw_keypoints=cfg.draw_skeleton)
             writer.write(frame)
 

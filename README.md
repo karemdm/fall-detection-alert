@@ -223,6 +223,7 @@ fine for private testing but should not be committed.
 | `--upright-angle` | `30` | Torso angle (deg) at or below which the posture is upright. |
 | `--upright-aspect` | `0.8` | Box w/h at or below which the posture is upright. |
 | `--fallen-seconds` | `1.0` | Seconds the lying posture must be held before `ALERT`. |
+| `--banner-hold` | `1.0` | Seconds an open alert stays in the video banner after its person was last seen (display only, events are not affected). |
 | `--lying-gap` | `0.3` | Non-lying gaps (s) shorter than this do not interrupt `FALLEN`. |
 | `--falling-timeout` | `2.0` | Seconds in `FALLING` without lying before returning to `UPRIGHT`. |
 | `--recover-seconds` | `2.0` | Seconds of upright posture that end `ALERT`. |
@@ -241,7 +242,7 @@ fine for private testing but should not be committed.
     `UPRIGHT` tracks with an `n/a` angle are not drawn, because they are mostly false person detections
     (objects, coats, shadows); falling, fallen and alert tracks are always drawn;
   - red banner `FALL ALERT #<ids> since <t> s` while an alert is open and its person is on screen (a track not seen for
-    more than `--lying-gap` seconds is hidden, although its event stays open until `--lost-seconds`), and the video
+    more than `--banner-hold` seconds is hidden, although its event stays open until `--lost-seconds`), and the video
     time in the bottom-right corner.
 - **Events JSON** (`--events-json`):
 

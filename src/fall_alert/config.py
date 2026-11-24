@@ -31,6 +31,8 @@ class FallConfig:
         falling_timeout: ``FALLING`` without lying for this long returns to ``UPRIGHT``.
         recover_seconds: Upright posture held this long ends ``ALERT``.
         lost_seconds: A track not seen for this long is dropped (its open alert is closed).
+        banner_hold: How long (s) after its last observation an open alert is still shown in the
+            video banner. Display only; does not change events.
         min_pose_keypoints: A track can fall only after at least one frame with this many
             keypoints above ``min_kp_conf``. Rejects objects detected as a person (bins, coats,
             shadows), which rarely show a body pose; ``0`` disables the check.
@@ -54,6 +56,7 @@ class FallConfig:
     falling_timeout: float = 2.0
     recover_seconds: float = 2.0
     lost_seconds: float = 2.0
+    banner_hold: float = 1.0
     min_pose_keypoints: int = 6
     stitch_distance: float = 1.0
 
@@ -79,7 +82,7 @@ class FallConfig:
         for name in ("velocity_window", "height_window", "lying_aspect", "upright_aspect"):
             check(name, getattr(self, name) > 0, "greater than 0")
         for name in ("fallen_seconds", "lying_gap", "falling_timeout", "recover_seconds", "lost_seconds",
-                     "stitch_distance"):
+                     "banner_hold", "stitch_distance"):
             check(name, inside(getattr(self, name), 0.0), "0 or more")
         check("min_pose_keypoints", 0 <= self.min_pose_keypoints <= 17, "between 0 and 17")
         return problems

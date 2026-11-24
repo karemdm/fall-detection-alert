@@ -127,7 +127,7 @@ flowchart TD
 - A track that is not detected for more than `lost_seconds` (2 s) is dropped; an
   open alert is closed with the time it was last seen (`end_reason: "lost"`). A
   track that reappears later with the same id starts again in `UPRIGHT`. The alert
-  banner only lists tracks seen within the last `lying_gap` seconds, so it clears as
+  banner only lists tracks seen within the last `banner_hold` seconds (default 1.0, independent of `lying_gap`), so it clears as
   soon as the person leaves the screen.
 - At the end of the video, open alerts are closed with `end_reason: "end_of_video"`.
 - Timestamps are video time from `CAP_PROP_POS_MSEC` (falls back to
@@ -148,6 +148,7 @@ flowchart TD
 | `lying_aspect` | 1.2 | Requires a wider box to count as lying (by box alone). |
 | `upright_angle` / `upright_aspect` | 30° / 0.8 | Recovery is accepted from less straight postures. |
 | `fallen_seconds` | 1.0 s | Later alerts, fewer alerts from brief lying-like poses. |
+| `banner_hold` | 1.0 s | Display only: how long the banner stays after the person was last seen. |
 | `lying_gap` | 0.3 s | More tolerance to keypoint glitches while on the floor. |
 | `falling_timeout` | 2.0 s | Longer wait for a lying posture after a suspicious motion. |
 | `recover_seconds` | 2.0 s | The person must stand longer before the alert ends. |
