@@ -39,7 +39,7 @@ class FallConfig:
         stitch_distance: A new track that starts within this distance (in body heights) of a
             track lost less than ``lost_seconds`` ago continues that track's state and alert.
             Handles tracker id switches when the box changes shape during a fall, so only tracks
-            that were not ``UPRIGHT`` when lost are candidates, and only for a newcomer that is not clearly upright; ``0`` disables.
+            that were not ``UPRIGHT`` when lost are candidates, and only for a newcomer that is tilted (at or above ``falling_angle``) or wide; ``0`` disables.
     """
 
     min_kp_conf: float = 0.5

@@ -115,10 +115,10 @@ flowchart TD
   restart. A track lost while `UPRIGHT` is never stitched, so a new person walking in
   near it starts a new state machine in `UPRIGHT` (unarmed until one frame with enough
   keypoints). The stitched track keeps the old machine as is (including `armed`), and
-  the open alert moves with it, still one event. The newcomer must also not be clearly
-  upright at its first observation (torso angle above `upright_angle` or box aspect
-  above `upright_aspect`, or no angle and a wide box): an upright person next to a lost
-  `FALLEN` or `ALERT` track is someone else and is not stitched. When nothing stitches, the
+  the open alert moves with it, still one event. The newcomer must also be tilted or
+  wide at its first observation (torso angle at or above `falling_angle`=45°, or box aspect
+  above `upright_aspect`; no angle counts as not tilted): a narrow person below the falling
+  angle next to a lost `FALLEN` or `ALERT` track is someone else and is not stitched. When nothing stitches, the
   old alert closes as `lost` at the last time the old track was seen.
   Results published before this rule was added were produced with the older, broader
   stitching and may differ.
